@@ -4,6 +4,8 @@ import com.github.lucsartes.intellijprojectidentifierplugin.core.PluginSettings
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.SearchableConfigurable
+import com.intellij.ui.components.JBCheckBox
+import com.intellij.ui.components.LabeledComponent
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
@@ -18,7 +20,7 @@ class IntelliJSettingsConfigurable : SearchableConfigurable {
     private val service: SettingsPort = ApplicationManager.getApplication().getService(SettingsPort::class.java)
 
     private var panel: JPanel? = null
-    private lateinit var enabledCheckBox: JCheckBox
+    private lateinit var enabledCheckBox: JBCheckBox
     private lateinit var opacitySlider: JSlider
     private lateinit var opacityValueLabel: JLabel
     private lateinit var identifierField: JTextField
@@ -42,13 +44,10 @@ class IntelliJSettingsConfigurable : SearchableConfigurable {
                 }
 
                 // Enabled checkbox
-                enabledCheckBox = JCheckBox("Enable project identifier watermark")
+                enabledCheckBox = JBCheckBox("Enable project identifier watermark")
                 add(enabledCheckBox, gbc)
 
-                // Opacity label and slider
-                gbc.gridy++
-                add(JLabel("Watermark opacity"), gbc)
-
+                // Opacity slider with label
                 gbc.gridy++
                 val sliderPanel = JPanel().apply {
                     layout = BoxLayout(this, BoxLayout.X_AXIS)
@@ -62,15 +61,14 @@ class IntelliJSettingsConfigurable : SearchableConfigurable {
                     add(Box.createHorizontalStrut(8))
                     add(opacityValueLabel)
                 }
-                add(sliderPanel, gbc)
+                val labeledSlider = LabeledComponent.create(sliderPanel, "Watermark opacity")
+                add(labeledSlider, gbc)
 
-                // Identifier override
-                gbc.gridy++
-                add(JLabel("Override identifier text (optional)"), gbc)
-
+                // Identifier override field with label
                 gbc.gridy++
                 identifierField = JTextField()
-                add(identifierField, gbc)
+                val labeledIdentifier = LabeledComponent.create(identifierField, "Override identifier text (optional)")
+                add(labeledIdentifier, gbc)
 
                 gbc.gridy++
                 gbc.weighty = 1.0

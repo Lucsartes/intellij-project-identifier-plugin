@@ -1,11 +1,12 @@
 package com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij
 
-import com.github.lucsartes.intellijprojectidentifierplugin.core.IdentifierServiceImpl
-import com.github.lucsartes.intellijprojectidentifierplugin.core.ImageServiceImpl
+import com.github.lucsartes.intellijprojectidentifierplugin.ports.IdentifierService
+import com.github.lucsartes.intellijprojectidentifierplugin.ports.ImageService
 import com.github.lucsartes.intellijprojectidentifierplugin.core.PluginSettings
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.BackgroundImagePort
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
@@ -48,9 +49,11 @@ class ProjectStartupActivity : ProjectActivity {
         }
 
         val projectName = project.name
-        val text = settings.identifierOverride ?: IdentifierServiceImpl().generate(projectName)
+        val identifierService = ApplicationManager.getApplication().getService(IdentifierService::class.java)
+        val text = settings.identifierOverride ?: identifierService.generate(projectName)
 
-        val imageBytes = ImageServiceImpl().renderPng(text)
+        val imageService = ApplicationManager.getApplication().getService(ImageService::class.java)
+        val imageBytes = imageService.renderPng(text)
         val imagePath = resolveImagePath(project)
 
         // Ensure parent directory exists and write the file
@@ -65,12 +68,9 @@ class ProjectStartupActivity : ProjectActivity {
     }
 
     private fun resolveImagePath(project: Project): Path {
-        val basePath = project.basePath
-        return if (basePath != null) {
-            Paths.get(basePath, ".idea", "project-identifier", "watermark.png")
-        } else {
-            val safeName = project.name.replace("[^A-Za-z0-9._-]".toRegex(), "_")
-            Paths.get(System.getProperty("java.io.tmpdir"), "project-identifier", safeName, "watermark.png")
-        }
+        // Centralized, plugin-specific directory under IDE system path (cache-like storage)
+        val safeName = project.name.replace("[^A-Za-z0-9._-]".toRegex(), "_")
+        val pluginDir = Paths.get(PathManager.getSystemPath(), "com.github.lucsartes.intellijprojectidentifierplugin", "watermarks")
+        return pluginDir.resolve("${'$'}safeName.png")
     }
 }

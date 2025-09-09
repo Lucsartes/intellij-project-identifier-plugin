@@ -12,6 +12,14 @@
             serviceInterface="com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort"
             serviceImplementation="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.IntelliJSettingsService"/>
 
+        <!-- Application-level core services implementing domain ports -->
+        <applicationService
+            serviceInterface="com.github.lucsartes.intellijprojectidentifierplugin.ports.IdentifierService"
+            serviceImplementation="com.github.lucsartes.intellijprojectidentifierplugin.core.IdentifierServiceImpl"/>
+        <applicationService
+            serviceInterface="com.github.lucsartes.intellijprojectidentifierplugin.ports.ImageService"
+            serviceImplementation="com.github.lucsartes.intellijprojectidentifierplugin.core.ImageServiceImpl"/>
+
         <!-- Project-level service that implements BackgroundImagePort via IntelliJ adapter -->
         <projectService
             serviceInterface="com.github.lucsartes.intellijprojectidentifierplugin.ports.BackgroundImagePort"
