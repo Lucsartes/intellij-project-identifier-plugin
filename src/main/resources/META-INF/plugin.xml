@@ -5,4 +5,26 @@
     <vendor>lucsartes</vendor>
 
     <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Application-level service that persists settings and implements SettingsPort -->
+        <applicationService 
+            serviceInterface="com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort"
+            serviceImplementation="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.IntelliJSettingsService"/>
+
+        <!-- Project-level service that implements BackgroundImagePort via IntelliJ adapter -->
+        <projectService
+            serviceInterface="com.github.lucsartes.intellijprojectidentifierplugin.ports.BackgroundImagePort"
+            serviceImplementation="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.IntelliJBackgroundImageAdapter"/>
+
+        <!-- Project startup activity -->
+        <postStartupActivity implementation="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.ProjectStartupActivity"/>
+
+        <!-- Settings UI under Appearance &amp; Behavior -->
+        <applicationConfigurable
+            instance="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.IntelliJSettingsConfigurable"
+            id="com.github.lucsartes.intellijprojectidentifierplugin.settings"
+            displayName="Project Identifier"
+            parentId="appearance"/>
+    </extensions>
 </idea-plugin>
