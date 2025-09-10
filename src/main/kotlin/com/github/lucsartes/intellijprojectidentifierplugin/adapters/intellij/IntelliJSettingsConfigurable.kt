@@ -5,7 +5,6 @@ import com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.ui.components.JBCheckBox
-import com.intellij.ui.components.LabeledComponent
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
@@ -30,6 +29,19 @@ class IntelliJSettingsConfigurable : SearchableConfigurable {
     override fun getDisplayName(): String = "Project Identifier"
 
     override fun getPreferredFocusedComponent(): JComponent? = if (this::identifierField.isInitialized) identifierField else null
+
+    private fun labeled(component: JComponent, labelText: String): JComponent {
+        return JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            alignmentX = JComponent.LEFT_ALIGNMENT
+            val label = JLabel(labelText)
+            label.alignmentX = JComponent.LEFT_ALIGNMENT
+            component.alignmentX = JComponent.LEFT_ALIGNMENT
+            add(label)
+            add(Box.createVerticalStrut(4))
+            add(component)
+        }
+    }
 
     override fun createComponent(): JComponent {
         if (panel == null) {
@@ -61,14 +73,12 @@ class IntelliJSettingsConfigurable : SearchableConfigurable {
                     add(Box.createHorizontalStrut(8))
                     add(opacityValueLabel)
                 }
-                val labeledSlider = LabeledComponent.create(sliderPanel, "Watermark opacity")
-                add(labeledSlider, gbc)
+                add(labeled(sliderPanel, "Watermark opacity"), gbc)
 
                 // Identifier override field with label
                 gbc.gridy++
                 identifierField = JTextField()
-                val labeledIdentifier = LabeledComponent.create(identifierField, "Override identifier text (optional)")
-                add(labeledIdentifier, gbc)
+                add(labeled(identifierField, "Override identifier text (optional)"), gbc)
 
                 gbc.gridy++
                 gbc.weighty = 1.0
