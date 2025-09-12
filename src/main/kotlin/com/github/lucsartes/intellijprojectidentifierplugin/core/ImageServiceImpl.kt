@@ -50,7 +50,7 @@ class ImageServiceImpl : ImageService {
 
         // Canvas size: text flush to top-left, plus 50px on right and bottom
         val marginRight = 50
-        val marginBottom = 20
+        val marginBottom = 10
         val width = (textWidth + marginRight).coerceAtLeast(1)
         val height = (ascent + descent + marginBottom).coerceAtLeast(1)
 

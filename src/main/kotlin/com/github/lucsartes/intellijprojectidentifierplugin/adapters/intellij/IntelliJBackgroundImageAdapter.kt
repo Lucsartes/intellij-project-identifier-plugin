@@ -35,7 +35,7 @@ class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundI
             val existing = props.getValue(IdeBackgroundUtil.EDITOR_PROP)?.trim()
 
             // Default values if none exist
-            val defaultOpacityPercent = 15
+            val defaultOpacityPercent = 50
             val defaultStyle = "plain"
             val defaultAnchor = "bottom_right"
 
@@ -45,12 +45,12 @@ class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundI
                 val parts = existing.split(',')
                 val parsedOpacity = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 100)
                 val rawOpacity = parsedOpacity ?: defaultOpacityPercent
-                val op = if (rawOpacity >= 25) rawOpacity else 25
+                val op = if (rawOpacity >= 50) rawOpacity else 50
                 val st = parts.getOrNull(2)?.ifBlank { null } ?: defaultStyle
                 val an = parts.getOrNull(3)?.ifBlank { null } ?: defaultAnchor
                 Triple(op, st, an)
             } else {
-                val op = if (defaultOpacityPercent >= 25) defaultOpacityPercent else 25
+                val op = if (defaultOpacityPercent >= 50) defaultOpacityPercent else 50
                 Triple(op, defaultStyle, defaultAnchor)
             }
 
