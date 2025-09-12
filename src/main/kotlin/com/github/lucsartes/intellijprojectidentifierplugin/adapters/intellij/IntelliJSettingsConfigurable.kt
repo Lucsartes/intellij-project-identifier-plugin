@@ -3,6 +3,7 @@ package com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij
 import com.github.lucsartes.intellijprojectidentifierplugin.core.PluginSettings
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.ui.components.JBCheckBox
 import java.awt.GridBagConstraints
@@ -16,12 +17,11 @@ import javax.swing.*
  */
 class IntelliJSettingsConfigurable : SearchableConfigurable {
 
+    private val log = Logger.getInstance(IntelliJSettingsConfigurable::class.java)
     private val service: SettingsPort = ApplicationManager.getApplication().getService(SettingsPort::class.java)
 
     private var panel: JPanel? = null
     private lateinit var enabledCheckBox: JBCheckBox
-    private lateinit var opacitySlider: JSlider
-    private lateinit var opacityValueLabel: JLabel
     private lateinit var identifierField: JTextField
 
     override fun getId(): String = "com.github.lucsartes.intellijprojectidentifierplugin.settings"
@@ -45,6 +45,7 @@ class IntelliJSettingsConfigurable : SearchableConfigurable {
 
     override fun createComponent(): JComponent {
         if (panel == null) {
+            log.info("Creating Project Identifier settings UI panel")
             panel = JPanel(GridBagLayout()).apply {
                 val gbc = GridBagConstraints().apply {
                     gridx = 0
@@ -59,22 +60,6 @@ class IntelliJSettingsConfigurable : SearchableConfigurable {
                 enabledCheckBox = JBCheckBox("Enable project identifier watermark")
                 add(enabledCheckBox, gbc)
 
-                // Opacity slider with label
-                gbc.gridy++
-                val sliderPanel = JPanel().apply {
-                    layout = BoxLayout(this, BoxLayout.X_AXIS)
-                    opacitySlider = JSlider(0, 100)
-                    opacitySlider.majorTickSpacing = 25
-                    opacitySlider.minorTickSpacing = 5
-                    opacitySlider.paintTicks = true
-                    opacitySlider.paintLabels = false
-                    opacityValueLabel = JLabel("")
-                    add(opacitySlider)
-                    add(Box.createHorizontalStrut(8))
-                    add(opacityValueLabel)
-                }
-                add(labeled(sliderPanel, "Watermark opacity"), gbc)
-
                 // Identifier override field with label
                 gbc.gridy++
                 identifierField = JTextField()
@@ -85,11 +70,8 @@ class IntelliJSettingsConfigurable : SearchableConfigurable {
                 add(Box.createVerticalGlue(), gbc)
             }
 
-            // Initialize values and listeners
+            // Initialize values
             reset()
-            opacitySlider.addChangeListener {
-                opacityValueLabel.text = "${'$'}{opacitySlider.value}%"
-            }
         }
         return panel as JPanel
     }
@@ -97,31 +79,31 @@ class IntelliJSettingsConfigurable : SearchableConfigurable {
     override fun isModified(): Boolean {
         val s = service.load()
         val uiEnabled = enabledCheckBox.isSelected
-        val uiOpacity = opacitySlider.value / 100.0f
         val uiIdentifier = identifierField.text.ifBlank { null }
-        return (uiEnabled != s.enabled) ||
-                (kotlin.math.abs(uiOpacity - s.opacity) > 0.001f) ||
+        val modified = (uiEnabled != s.enabled) ||
                 (uiIdentifier != s.identifierOverride)
+        log.info("Settings UI isModified: $modified (uiEnabled=$uiEnabled, uiIdentifier=$uiIdentifier) vs (enabled=${s.enabled}, identifier=${s.identifierOverride})")
+        return modified
     }
 
     override fun apply() {
         val settings = PluginSettings(
             enabled = enabledCheckBox.isSelected,
-            opacity = (opacitySlider.value / 100.0f).coerceIn(0.0f, 1.0f),
             identifierOverride = identifierField.text.ifBlank { null }
         )
+        log.info("Applying settings from UI: enabled=${settings.enabled}, override=${settings.identifierOverride}")
         service.save(settings)
     }
 
     override fun reset() {
         val s = service.load()
+        log.info("Resetting settings UI from service: enabled=${s.enabled}, override=${s.identifierOverride}")
         enabledCheckBox.isSelected = s.enabled
-        opacitySlider.value = (s.opacity * 100).toInt().coerceIn(0, 100)
-        opacityValueLabel.text = "${'$'}{opacitySlider.value}%"
         identifierField.text = s.identifierOverride ?: ""
     }
 
     override fun disposeUIResources() {
+        log.info("Disposing settings UI resources")
         panel = null
     }
 }

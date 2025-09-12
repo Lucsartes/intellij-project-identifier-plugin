@@ -4,22 +4,55 @@ import com.github.lucsartes.intellijprojectidentifierplugin.ports.ImageService
 import java.awt.*
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
+import java.util.logging.Logger
 import javax.imageio.ImageIO
 
 /**
  * AWT-based implementation of ImageService that renders a transparent PNG with
- * the provided text centered on the image.
+ * the provided text tightly cropped to the top-left, plus a 50px margin on the
+ * right and bottom.
  *
  * Notes:
  * - Uses only JDK AWT/Swing APIs, which work in headless mode.
- * - Keeps implementation simple and deterministic with fixed canvas size.
+ * - Image size adapts to the rendered text to avoid extra spacing.
  */
 class ImageServiceImpl : ImageService {
 
+    private val log: Logger = Logger.getLogger(ImageServiceImpl::class.java.name)
+
     override fun renderPng(text: String): ByteArray {
-        // Canvas configuration
-        val width = 800
-        val height = 600
+        val inputPreview = if (text.length > 64) text.take(64) + "…" else text
+        log.info("Rendering PNG for text (len=${text.length}): '$inputPreview'")
+
+        val textToDraw = text.ifBlank { "" }
+
+        // Choose a legible, watermark-like font size (similar to previous 600*0.18 = ~108)
+        val fontSize = 108.coerceAtLeast(12)
+        val baseFont = Font("SansSerif", Font.BOLD, fontSize)
+
+        // Use a temporary graphics context to measure text
+        val tmpImage = BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB)
+        val tmpG = tmpImage.createGraphics()
+        tmpG.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        tmpG.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+        tmpG.font = baseFont
+        val fm = tmpG.fontMetrics
+        val ascent = fm.ascent
+        val descent = fm.descent
+        val textWidth = if (textToDraw.isNotEmpty()) fm.stringWidth(textToDraw) else 0
+        tmpG.dispose()
+
+        // If no text, return a minimal transparent PNG
+        if (textToDraw.isEmpty()) {
+            return toPngBytes(BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB))
+        }
+
+        // Canvas size: text flush to top-left, plus 50px on right and bottom
+        val marginRight = 50
+        val marginBottom = 20
+        val width = (textWidth + marginRight).coerceAtLeast(1)
+        val height = (ascent + descent + marginBottom).coerceAtLeast(1)
+
         val image = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
         val g2d = image.createGraphics()
 
@@ -28,36 +61,32 @@ class ImageServiceImpl : ImageService {
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
 
-            // Transparent background (already transparent due to TYPE_INT_ARGB), but ensure it's cleared
+            // Clear to transparent
             g2d.composite = AlphaComposite.Clear
             g2d.fillRect(0, 0, width, height)
 
             // Draw text with low opacity for watermark effect
             g2d.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.15f)
+            g2d.font = baseFont
+            g2d.color = Color(255, 255, 255)
 
-            // Choose a font size proportionally to canvas height
-            val fontSize = (height * 0.18).toInt().coerceAtLeast(12)
-            g2d.font = Font("SansSerif", Font.BOLD, fontSize)
-            g2d.color = Color(0, 0, 0) // black text with alpha via composite
-
-            val fm = g2d.fontMetrics
-            val textToDraw = text.ifBlank { "" }
-
-            // Compute centered position
-            val textWidth = fm.stringWidth(textToDraw)
-            val x = ((width - textWidth) / 2.0).toInt()
-            val y = ((height - fm.height) / 2.0 + fm.ascent).toInt()
-
-            // Draw only if there is text; otherwise keep it transparent
-            if (textToDraw.isNotEmpty()) {
-                g2d.drawString(textToDraw, x, y)
-            }
+            // Position so that top touches image's top, left touches image's left
+            val x = 0
+            val y = ascent // baseline so that top (y - ascent) == 0
+            g2d.drawString(textToDraw, x, y)
+            log.info("Drew text at x=$x, y=$y; canvas=${width}x${height}; textWidth=$textWidth, ascent=$ascent, descent=$descent")
         } finally {
             g2d.dispose()
         }
 
+        return toPngBytes(image)
+    }
+
+    private fun toPngBytes(image: BufferedImage): ByteArray {
         val baos = ByteArrayOutputStream()
         ImageIO.write(image, "png", baos)
-        return baos.toByteArray()
+        val bytes = baos.toByteArray()
+        log.info("PNG rendered: ${bytes.size} bytes (size=${image.width}x${image.height})")
+        return bytes
     }
 }
