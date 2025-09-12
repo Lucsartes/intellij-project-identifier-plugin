@@ -26,9 +26,10 @@ class ImageServiceImpl : ImageService {
 
         val textToDraw = text.ifBlank { "" }
 
-        // Choose a legible, watermark-like font size (similar to previous 600*0.18 = ~108)
-        val fontSize = 108.coerceAtLeast(12)
-        val baseFont = Font("SansSerif", Font.BOLD, fontSize)
+        // Choose a legible, watermark-like font size and lighter weight
+        // Baseline increased by 1/3 from ~108 to ~144 for better visibility
+        val fontSize = ((108 * 4) / 3).coerceAtLeast(12)
+        val baseFont = Font("SansSerif", Font.PLAIN, fontSize)
 
         // Use a temporary graphics context to measure text
         val tmpImage = BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB)
