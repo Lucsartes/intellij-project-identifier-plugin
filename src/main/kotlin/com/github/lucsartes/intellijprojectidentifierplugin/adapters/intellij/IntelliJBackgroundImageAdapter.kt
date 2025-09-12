@@ -35,7 +35,7 @@ class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundI
             val existing = props.getValue(IdeBackgroundUtil.EDITOR_PROP)?.trim()
 
             // Default values if none exist
-            val defaultOpacityPercent = 30
+            val defaultOpacityPercent = 15
             val defaultStyle = "plain"
             val defaultAnchor = "bottom_right"
 
@@ -43,12 +43,15 @@ class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundI
             val (effectiveOpacity, effectiveStyle, effectiveAnchor) = if (!existing.isNullOrBlank()) {
                 // Expected format: "<path>,<opacity%>,<style>,<anchor>"
                 val parts = existing.split(',')
-                val op = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 100) ?: defaultOpacityPercent
+                val parsedOpacity = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 100)
+                val rawOpacity = parsedOpacity ?: defaultOpacityPercent
+                val op = if (rawOpacity >= 25) rawOpacity else 25
                 val st = parts.getOrNull(2)?.ifBlank { null } ?: defaultStyle
                 val an = parts.getOrNull(3)?.ifBlank { null } ?: defaultAnchor
                 Triple(op, st, an)
             } else {
-                Triple(defaultOpacityPercent, defaultStyle, defaultAnchor)
+                val op = if (defaultOpacityPercent >= 25) defaultOpacityPercent else 25
+                Triple(op, defaultStyle, defaultAnchor)
             }
 
             val newProp = "$absolutePath,$effectiveOpacity,$effectiveStyle,$effectiveAnchor"
