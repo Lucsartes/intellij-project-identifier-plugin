@@ -13,6 +13,7 @@ import com.intellij.openapi.startup.ProjectActivity
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.UUID
 
 /**
  * Main entry point: runs on project open and orchestrates the pipeline
@@ -30,12 +31,12 @@ class ProjectStartupActivity : ProjectActivity {
             .onFailure { log.warn("Pipeline failed on project startup for '${project.name}'", it) }
 
         // Subscribe to settings changes and rerun the pipeline
-        val connection = project.messageBus.connect(project)
+        val connection = project.messageBus.connect()
         connection.subscribe(
             IntelliJSettingsService.TOPIC,
             object : IntelliJSettingsService.SettingsChangedListener {
                 override fun settingsChanged(newSettings: PluginSettings) {
-                    log.info("Settings changed for '${project.name}': enabled=${newSettings.enabled}, override=${newSettings.identifierOverride}")
+                    log.info("Settings changed for '${project.name}': enabled=${newSettings.enabled}, override=${newSettings.identifierOverride}, fontFamily=${newSettings.fontFamily}, fontSizePx=${newSettings.fontSizePx}")
                     runCatching { runPipeline(project) }
                         .onFailure { log.warn("Pipeline failed after settings change for '${project.name}'", it) }
                 }
@@ -46,8 +47,8 @@ class ProjectStartupActivity : ProjectActivity {
 
     private fun runPipeline(project: Project) {
         log.info("Pipeline step: load settings for project '${project.name}'")
-        val settings = ApplicationManager.getApplication().getService(SettingsPort::class.java).load()
-        log.info("Settings loaded: enabled=${settings.enabled}, override=${settings.identifierOverride}")
+        val settings = project.getService(SettingsPort::class.java).load()
+        log.info("Settings loaded (project-scoped): enabled=${settings.enabled}, override=${settings.identifierOverride}, fontFamily=${settings.fontFamily}, fontSizePx=${settings.fontSizePx}")
         if (!settings.enabled) {
             log.info("Project Identifier is disabled; skipping background application for '${project.name}'")
             return
@@ -61,7 +62,7 @@ class ProjectStartupActivity : ProjectActivity {
 
         log.info("Pipeline step: render PNG for identifier")
         val imageService = ApplicationManager.getApplication().getService(ImageService::class.java)
-        val imageBytes = imageService.renderPng(text)
+        val imageBytes = imageService.renderPng(text, settings.fontFamily, settings.fontSizePx)
         log.info("Image rendered: ${imageBytes.size} bytes")
 
         log.info("Pipeline step: resolve image path")
@@ -73,11 +74,12 @@ class ProjectStartupActivity : ProjectActivity {
         Files.createDirectories(imagePath.parent)
         // Best-effort cleanup to avoid stale files and force IntelliJ to reload when name changes
         runCatching {
-            val safeProjectPrefix = project.name.replace("[^A-Za-z0-9._-]".toRegex(), "_")
+            val safeProject = project.name.replace("[^A-Za-z0-9._-]".toRegex(), "_")
             Files.list(imagePath.parent).use { stream ->
                 stream.forEach { p ->
                     val name = p.fileName.toString()
-                    if (name.startsWith(safeProjectPrefix)) {
+                    val matchesThisProject = name.startsWith("$safeProject-")
+                    if (matchesThisProject) {
                         runCatching { Files.deleteIfExists(p) }
                             .onFailure { t -> log.warn("Failed to delete old watermark file '$p'", t) }
                     }
@@ -101,7 +103,10 @@ class ProjectStartupActivity : ProjectActivity {
         val safeProject = project.name.replace("[^A-Za-z0-9._-]".toRegex(), "_")
         val safeText = text.replace("[^A-Za-z0-9._-]".toRegex(), "_")
         val pluginDir = Paths.get(PathManager.getSystemPath(), "com.github.lucsartes.intellijprojectidentifierplugin", "watermarks")
-        val fileName = if (safeText.isNotBlank()) "$safeProject - $safeText.png" else "$safeProject.png"
+        // Generate a short 10-char UUID-like token for uniqueness
+        val uid10 = UUID.randomUUID().toString().replace("-", "").take(10)
+        val baseName = "$safeProject-$safeText"
+        val fileName = "$baseName-$uid10.png"
         return pluginDir.resolve(fileName)
     }
 }

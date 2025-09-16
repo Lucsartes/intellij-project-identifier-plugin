@@ -20,16 +20,23 @@ class ImageServiceImpl : ImageService {
 
     private val log: Logger = Logger.getLogger(ImageServiceImpl::class.java.name)
 
-    override fun renderPng(text: String): ByteArray {
+    override fun renderPng(text: String, fontFamily: String?, fontSizePx: Int?): ByteArray {
         val inputPreview = if (text.length > 64) text.take(64) + "…" else text
         log.info("Rendering PNG for text (len=${text.length}): '$inputPreview'")
 
         val textToDraw = text.ifBlank { "" }
 
-        // Choose a legible, watermark-like font size and lighter weight
-        // Baseline increased by 1/3 from ~108 to ~144 for better visibility
-        val fontSize = ((108 * 4) / 3).coerceAtLeast(12)
-        val baseFont = Font("SansSerif", Font.PLAIN, fontSize)
+        // Determine effective font family and size
+        val defaultSize = ((108 * 4) / 3).coerceAtLeast(12)
+        val effectiveFontSize = (fontSizePx ?: defaultSize).coerceAtLeast(1)
+        val availableFamilies = try {
+            GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()
+        } catch (t: Throwable) {
+            emptySet()
+        }
+        val family = fontFamily?.takeIf { it.isNotBlank() && (availableFamilies.isEmpty() || availableFamilies.contains(it)) }
+            ?: "SansSerif"
+        val baseFont = Font(family, Font.PLAIN, effectiveFontSize)
 
         // Use a temporary graphics context to measure text
         val tmpImage = BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB)
@@ -75,7 +82,7 @@ class ImageServiceImpl : ImageService {
             val x = 0
             val y = ascent // baseline so that top (y - ascent) == 0
             g2d.drawString(textToDraw, x, y)
-            log.info("Drew text at x=$x, y=$y; canvas=${width}x${height}; textWidth=$textWidth, ascent=$ascent, descent=$descent")
+            log.info("Drew text at x=$x, y=$y; canvas=${width}x${height}; textWidth=$textWidth, ascent=$ascent, descent=$descent; fontFamily='$family', fontSize=$effectiveFontSize")
         } finally {
             g2d.dispose()
         }
