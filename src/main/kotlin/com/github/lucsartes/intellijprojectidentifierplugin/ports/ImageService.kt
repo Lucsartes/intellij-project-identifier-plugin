@@ -9,7 +9,9 @@ interface ImageService {
      * Render the provided text into a PNG image with transparency.
      *
      * @param text The text content to render.
+     * @param fontFamily Optional font family name to use; null means implementation default.
+     * @param fontSizePx Optional font size in pixels; null means implementation default.
      * @return PNG image bytes.
      */
-    fun renderPng(text: String): ByteArray
+    fun renderPng(text: String, fontFamily: String? = null, fontSizePx: Int? = null): ByteArray
 }

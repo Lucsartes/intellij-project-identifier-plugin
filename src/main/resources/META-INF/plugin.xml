@@ -1,14 +1,14 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <id>com.github.lucsartes.intellijprojectidentifierplugin</id>
-    <name>intellij-project-identifier-plugin</name>
+    <name>Project Identifier</name>
     <vendor>lucsartes</vendor>
 
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <!-- Application-level service that persists settings and implements SettingsPort -->
-        <applicationService 
+        <!-- Project-level service that persists settings and implements SettingsPort -->
+        <projectService 
             serviceInterface="com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort"
             serviceImplementation="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.IntelliJSettingsService"/>
 
@@ -28,8 +28,8 @@
         <!-- Project startup activity -->
         <postStartupActivity implementation="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.ProjectStartupActivity"/>
 
-        <!-- Settings UI under Appearance &amp; Behavior -->
-        <applicationConfigurable
+        <!-- Settings UI under Appearance &amp; Behavior (project-scoped) -->
+        <projectConfigurable
             instance="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.IntelliJSettingsConfigurable"
             id="com.github.lucsartes.intellijprojectidentifierplugin.settings"
             displayName="Project Identifier"

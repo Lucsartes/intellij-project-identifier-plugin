@@ -18,7 +18,7 @@
 - [ ] Configure the [CODECOV_TOKEN](https://docs.codecov.com/docs/quick-start) secret for automated test coverage reports on PRs
 
 <!-- Plugin description -->
-# IntelliJ Project Identifier Plugin
+Project Identifier helps you tell multiple IDE projects apart by adding a subtle, low-opacity text watermark to the editor background.
 
 ## 🌟 What It Does
 
