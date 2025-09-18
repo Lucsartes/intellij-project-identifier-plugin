@@ -68,4 +68,45 @@ class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundI
             log.warn("Failed to apply background image via PropertiesComponent", t)
         }
     }
+
+    override fun resetBackgroundSettingsToDefaults() {
+        try {
+            var projectScoped = true
+            val props = try {
+                PropertiesComponent.getInstance(project)
+            } catch (e: Throwable) {
+                log.warn("Project-scoped PropertiesComponent not available, falling back to application scope", e)
+                projectScoped = false
+                PropertiesComponent.getInstance()
+            }
+
+            val existing = props.getValue(IdeBackgroundUtil.EDITOR_PROP)?.trim()
+            val existingPath = existing?.split(',')?.getOrNull(0)?.orEmpty()
+
+            val newProp = listOf(
+                existingPath ?: "",
+                BackgroundPropertiesConstants.DEFAULT_OPACITY_PERCENT.toString(),
+                BackgroundPropertiesConstants.DEFAULT_STYLE,
+                BackgroundPropertiesConstants.DEFAULT_ANCHOR
+            ).joinToString(",")
+
+            // Write combined property (keeps current path if present)
+            props.setValue(IdeBackgroundUtil.EDITOR_PROP, newProp)
+
+            // Write legacy/UI keys
+            try {
+                props.setValue(BackgroundPropertiesConstants.KEY_OPACITY, BackgroundPropertiesConstants.DEFAULT_OPACITY_PERCENT.toString())
+                props.setValue(BackgroundPropertiesConstants.KEY_FILL, BackgroundPropertiesConstants.DEFAULT_STYLE)
+                props.setValue(BackgroundPropertiesConstants.KEY_ANCHOR, BackgroundPropertiesConstants.DEFAULT_ANCHOR)
+                props.setValue(BackgroundPropertiesConstants.KEY_FOR_PROJECT, projectScoped.toString())
+            } catch (ignored: Throwable) {
+                log.debug("Failed to reset one of the legacy background properties", ignored)
+            }
+
+            log.info("Reset background properties to defaults for project '${project.name}' -> property='$newProp'")
+            IdeBackgroundUtil.repaintAllWindows()
+        } catch (t: Throwable) {
+            log.warn("Failed to reset background image properties to defaults", t)
+        }
+    }
 }

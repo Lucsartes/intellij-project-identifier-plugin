@@ -32,24 +32,24 @@ class IntelliJSettingsService(private val project: Project) : PersistentStateCom
     }
 
     data class State(
-        var enabled: Boolean = PluginSettings().enabled,
         var identifierOverride: String? = PluginSettings().identifierOverride,
         var fontFamily: String? = PluginSettings().fontFamily,
         var fontSizePx: Int? = PluginSettings().fontSizePx,
+        var textColorArgb: Int? = PluginSettings().textColorArgb,
     ) {
         fun toDomain(): PluginSettings = PluginSettings(
-            enabled = enabled,
             identifierOverride = identifierOverride?.ifBlank { null },
             fontFamily = fontFamily?.ifBlank { null },
-            fontSizePx = fontSizePx
+            fontSizePx = fontSizePx,
+            textColorArgb = textColorArgb
         )
 
         companion object {
             fun fromDomain(settings: PluginSettings): State = State(
-                enabled = settings.enabled,
                 identifierOverride = settings.identifierOverride?.ifBlank { null },
                 fontFamily = settings.fontFamily?.ifBlank { null },
-                fontSizePx = settings.fontSizePx
+                fontSizePx = settings.fontSizePx,
+                textColorArgb = settings.textColorArgb
             )
         }
     }
@@ -60,24 +60,24 @@ class IntelliJSettingsService(private val project: Project) : PersistentStateCom
 
     // PersistentStateComponent implementation
     override fun getState(): State {
-        log.info("getState called: enabled=${state.enabled}, override=${state.identifierOverride}, fontFamily=${state.fontFamily}, fontSizePx=${state.fontSizePx}")
+        log.info("getState called: override=${state.identifierOverride}, fontFamily=${state.fontFamily}, fontSizePx=${state.fontSizePx}, textColorArgb=${state.textColorArgb}")
         return state
     }
 
     override fun loadState(state: State) {
-        log.info("Loading persisted settings state: enabled=${state.enabled}, override=${state.identifierOverride}, fontFamily=${state.fontFamily}, fontSizePx=${state.fontSizePx}")
+        log.info("Loading persisted settings state: override=${state.identifierOverride}, fontFamily=${state.fontFamily}, fontSizePx=${state.fontSizePx}, textColorArgb=${state.textColorArgb}")
         this.state = state
     }
 
     // SettingsPort implementation
     override fun load(): PluginSettings {
         val s = state.toDomain()
-        log.info("Settings loaded (toDomain): enabled=${s.enabled}, override=${s.identifierOverride}, fontFamily=${s.fontFamily}, fontSizePx=${s.fontSizePx}")
+        log.info("Settings loaded (toDomain): override=${s.identifierOverride}, fontFamily=${s.fontFamily}, fontSizePx=${s.fontSizePx}, textColorArgb=${s.textColorArgb}")
         return s
     }
 
     override fun save(settings: PluginSettings) {
-        log.info("Saving settings: enabled=${settings.enabled}, override=${settings.identifierOverride}, fontFamily=${settings.fontFamily}, fontSizePx=${settings.fontSizePx}")
+        log.info("Saving settings: override=${settings.identifierOverride}, fontFamily=${settings.fontFamily}, fontSizePx=${settings.fontSizePx}, textColorArgb=${settings.textColorArgb}")
         this.state = State.fromDomain(settings)
         // publish settings changed event
         runCatching {

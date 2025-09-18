@@ -7,7 +7,6 @@ package com.github.lucsartes.intellijprojectidentifierplugin.core
  * like opacity, which are controlled by the IDE's own Appearance > Background Image settings.
  */
 data class PluginSettings(
-    val enabled: Boolean = true,
     /**
      * If provided, this text overrides the derived project identifier.
      * Null means use the automatically derived identifier.
@@ -21,4 +20,8 @@ data class PluginSettings(
      * Optional font size (in pixels) to use when rendering the watermark text. Null means implementation default.
      */
     val fontSizePx: Int? = null,
+    /**
+     * Optional ARGB color for the text. Null means default (white).
+     */
+    val textColorArgb: Int? = null,
 )

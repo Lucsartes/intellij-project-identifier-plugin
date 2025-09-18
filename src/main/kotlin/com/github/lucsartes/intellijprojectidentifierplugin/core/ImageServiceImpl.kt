@@ -25,7 +25,7 @@ class ImageServiceImpl : ImageService {
     private val log: Logger = Logger.getLogger(ImageServiceImpl::class.java.name)
 
 
-    override fun renderPng(text: String, fontFamily: String?, fontSizePx: Int?): ByteArray {
+    override fun renderPng(text: String, fontFamily: String?, fontSizePx: Int?, textColorArgb: Int?): ByteArray {
         val inputPreview = if (text.length > CoreDefaults.LOG_PREVIEW_LENGTH) text.take(CoreDefaults.LOG_PREVIEW_LENGTH) + "…" else text
         log.info("Rendering PNG for text (len=${text.length}): '$inputPreview'")
 
@@ -78,7 +78,10 @@ class ImageServiceImpl : ImageService {
             // Draw text fully opaque; opacity should be controlled by IDE background settings only
             g2d.composite = AlphaComposite.SrcOver
             g2d.font = baseFont
-            g2d.color = Color.WHITE
+            g2d.color = run {
+                val argb = textColorArgb
+                if (argb != null) Color(argb, true) else Color.WHITE
+            }
 
             // Position so that top touches image's top, left touches image's left
             val x = 0
@@ -90,6 +93,11 @@ class ImageServiceImpl : ImageService {
         }
 
         return toPngBytes(image)
+    }
+
+    // Backward-compatible overload for existing call sites/tests that use 3 parameters
+    fun renderPng(text: String, fontFamily: String?, fontSizePx: Int?): ByteArray {
+        return renderPng(text, fontFamily, fontSizePx, null)
     }
 
     private fun toPngBytes(image: BufferedImage): ByteArray {

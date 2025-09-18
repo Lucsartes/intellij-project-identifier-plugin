@@ -2,14 +2,17 @@ package com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij
 
 import com.github.lucsartes.intellijprojectidentifierplugin.core.PluginSettings
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort
+import com.github.lucsartes.intellijprojectidentifierplugin.ports.BackgroundImagePort
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.project.Project
-import com.intellij.ui.components.JBCheckBox
+import com.intellij.ui.ColorPanel
+import java.awt.Color
 import java.awt.GraphicsEnvironment
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
+import java.awt.Dimension
 import javax.swing.*
 
 /**
@@ -22,10 +25,10 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
     private val service: SettingsPort by lazy { project.getService(SettingsPort::class.java) }
 
     private var panel: JPanel? = null
-    private lateinit var enabledCheckBox: JBCheckBox
     private lateinit var identifierField: JTextField
     private lateinit var fontCombo: JComboBox<String>
     private lateinit var sizeCombo: JComboBox<String>
+    private lateinit var colorPanel: ColorPanel
 
     // Cached defaults used for rendering labels like "(Default)"
     private var defaultFontFamily: String? = null
@@ -50,6 +53,19 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
         }
     }
 
+    // Constrain the width of wide components so they don't span the whole settings page.
+    private fun restrictWidth(component: JComponent, preferredWidth: Int = 300, minWidth: Int = 160) {
+        val height = when {
+            component.preferredSize.height > 0 -> component.preferredSize.height
+            component.minimumSize.height > 0 -> component.minimumSize.height
+            else -> 24
+        }
+        val width = preferredWidth.coerceAtLeast(minWidth)
+        component.preferredSize = Dimension(width, height)
+        component.maximumSize = Dimension(width, height)
+        component.alignmentX = JComponent.LEFT_ALIGNMENT
+    }
+
     override fun createComponent(): JComponent {
         if (panel == null) {
             log.info("Creating Project Identifier settings UI panel")
@@ -63,14 +79,6 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                     insets = Insets(6, 6, 6, 6)
                 }
 
-                // Header explaining scope
-                val scopeLabel = JLabel("These settings apply only to this project.")
-                add(scopeLabel, gbc)
-
-                // Enabled checkbox
-                gbc.gridy++
-                enabledCheckBox = JBCheckBox("Enable project identifier watermark")
-                add(enabledCheckBox, gbc)
 
                 // Identifier override field with label
                 gbc.gridy++
@@ -122,6 +130,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                             return c
                         }
                     }
+                    restrictWidth(fontCombo)
                     add(labeled(fontCombo, "Font family"), gbc)
                 }
 
@@ -144,14 +153,59 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                             return c
                         }
                     }
+                    restrictWidth(sizeCombo)
                     add(labeled(sizeCombo, "Text size (px)"), gbc)
                 }
 
+
+                // Text color picker
+                gbc.gridy++
+                colorPanel = ColorPanel()
+                colorPanel.selectedColor = Color.WHITE
+                restrictWidth(colorPanel)
+                add(labeled(colorPanel, "Text color"), gbc)
+
+                // Reset to defaults label and button
+                gbc.gridy++
+                val resetLabel = JLabel("Reset all settings to default values")
+                add(resetLabel, gbc)
+
+                gbc.gridy++
+                val resetButton = JButton("Reset to Defaults")
+                // Make the reset button width consistent with other controls and avoid full-width stretching
+                restrictWidth(resetButton)
+                resetButton.addActionListener {
+                    runCatching {
+                        // Reset IDE background menu settings to defaults first
+                        val bg = project.getService(BackgroundImagePort::class.java)
+                        bg.resetBackgroundSettingsToDefaults()
+                    }.onFailure { t ->
+                        log.warn("Failed to reset background settings to defaults", t)
+                    }
+                    // Reset plugin settings to defaults and refresh UI
+                    val defaults = PluginSettings()
+                    log.info("Resetting plugin settings to defaults via UI action: override=${defaults.identifierOverride}, fontFamily=${defaults.fontFamily}, fontSizePx=${defaults.fontSizePx}, textColorArgb=${defaults.textColorArgb}")
+                    service.save(defaults)
+                    reset()
+                }
+                // Temporarily adjust GridBag constraints to prevent stretching this button
+                val oldFill = gbc.fill
+                val oldWeightX = gbc.weightx
+                val oldAnchor = gbc.anchor
+                gbc.fill = GridBagConstraints.NONE
+                gbc.weightx = 0.0
+                gbc.anchor = GridBagConstraints.WEST
+                add(resetButton, gbc)
+                // Restore defaults for subsequent components
+                gbc.fill = oldFill
+                gbc.weightx = oldWeightX
+                gbc.anchor = oldAnchor
 
                 // Hint about position/opacity settings location
                 gbc.gridy++
                 val hintLabel = JLabel("To change the watermark position and opacity, go to Appearance & Behavior | Appearance | Background Image.")
                 add(hintLabel, gbc)
+
 
                 gbc.gridy++
                 gbc.weighty = 1.0
@@ -166,18 +220,19 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
 
     override fun isModified(): Boolean {
         val s = service.load()
-        val uiEnabled = enabledCheckBox.isSelected
         val uiIdentifier = identifierField.text.ifBlank { null }
         val selectedFont = (if (this::fontCombo.isInitialized) fontCombo.selectedItem as? String else null)
         val uiFont = selectedFont?.let { if (defaultFontFamily != null && it == defaultFontFamily) null else it }
         val selectedSizeStr = (if (this::sizeCombo.isInitialized) sizeCombo.selectedItem as? String else null)
         val selectedSize = selectedSizeStr?.toIntOrNull()
         val uiSizePx = selectedSize?.let { if (it == defaultFontSizePx) null else it }
-        val modified = (uiEnabled != s.enabled) ||
-                (uiIdentifier != s.identifierOverride) ||
+        val uiColorArgbRaw = if (this::colorPanel.isInitialized) colorPanel.selectedColor?.rgb else null
+        val uiColorArgb = uiColorArgbRaw?.let { if (it == Color.WHITE.rgb) null else it }
+        val modified = (uiIdentifier != s.identifierOverride) ||
                 (uiFont != s.fontFamily) ||
-                (uiSizePx != s.fontSizePx)
-        log.info("Settings UI isModified: $modified (uiEnabled=$uiEnabled, uiIdentifier=$uiIdentifier, uiFont=$uiFont, uiSizePx=$uiSizePx) vs (enabled=${s.enabled}, identifier=${s.identifierOverride}, fontFamily=${s.fontFamily}, fontSizePx=${s.fontSizePx})")
+                (uiSizePx != s.fontSizePx) ||
+                (uiColorArgb != s.textColorArgb)
+        log.info("Settings UI isModified: $modified (uiIdentifier=$uiIdentifier, uiFont=$uiFont, uiSizePx=$uiSizePx, uiColorArgb=$uiColorArgb) vs (identifier=${s.identifierOverride}, fontFamily=${s.fontFamily}, fontSizePx=${s.fontSizePx}, textColorArgb=${s.textColorArgb})")
         return modified
     }
 
@@ -186,21 +241,23 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
         val uiFont = selectedFont?.let { if (defaultFontFamily != null && it == defaultFontFamily) null else it }
         val selectedSize = (sizeCombo.selectedItem as? String)?.toIntOrNull()
         val uiSizePx = selectedSize?.let { if (it == defaultFontSizePx) null else it }
+        val uiColorArgbRaw = colorPanel.selectedColor?.rgb
+        val uiColorArgb = uiColorArgbRaw?.let { if (it == Color.WHITE.rgb) null else it }
         val settings = PluginSettings(
-            enabled = enabledCheckBox.isSelected,
             identifierOverride = identifierField.text.ifBlank { null },
             fontFamily = uiFont,
-            fontSizePx = uiSizePx
+            fontSizePx = uiSizePx,
+            textColorArgb = uiColorArgb
         )
-        log.info("Applying settings from UI: enabled=${settings.enabled}, override=${settings.identifierOverride}, fontFamily=${settings.fontFamily}, fontSizePx=${settings.fontSizePx}")
+        log.info("Applying settings from UI: override=${settings.identifierOverride}, fontFamily=${settings.fontFamily}, fontSizePx=${settings.fontSizePx}, textColorArgb=${settings.textColorArgb}")
         service.save(settings)
     }
 
     override fun reset() {
         val s = service.load()
-        log.info("Resetting settings UI from service: enabled=${s.enabled}, override=${s.identifierOverride}, fontFamily=${s.fontFamily}, fontSizePx=${s.fontSizePx}")
-        enabledCheckBox.isSelected = s.enabled
+        log.info("Resetting settings UI from service: identifier=${s.identifierOverride}, fontFamily=${s.fontFamily}, fontSizePx=${s.fontSizePx}, textColorArgb=${s.textColorArgb}")
         identifierField.text = s.identifierOverride ?: ""
+        colorPanel.selectedColor = (s.textColorArgb?.let { Color(it, true) } ?: Color.WHITE)
         // Font selection
         run {
             val desired = s.fontFamily?.ifBlank { null }

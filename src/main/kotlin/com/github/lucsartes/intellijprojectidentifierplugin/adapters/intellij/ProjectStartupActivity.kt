@@ -6,6 +6,7 @@ import com.github.lucsartes.intellijprojectidentifierplugin.ports.IdentifierServ
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.ImageService
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -27,33 +28,59 @@ class ProjectStartupActivity : ProjectActivity {
 
     override suspend fun execute(project: Project) {
         log.info("Starting Project Identifier pipeline for project '${project.name}' on startup")
-        // Run once on startup
-        runCatching { runPipeline(project) }
-            .onFailure { log.warn("Pipeline failed on project startup for '${project.name}'", it) }
+        // Run once on startup in background (compute + persist), then apply on EDT
+        rerunPipelineAsync(project)
 
-        // Subscribe to settings changes and rerun the pipeline
+        // Subscribe to settings changes and rerun the pipeline asynchronously
         val connection = project.messageBus.connect()
         connection.subscribe(
             IntelliJSettingsService.TOPIC,
             object : IntelliJSettingsService.SettingsChangedListener {
                 override fun settingsChanged(newSettings: PluginSettings) {
-                    log.info("Settings changed for '${project.name}': enabled=${newSettings.enabled}, override=${newSettings.identifierOverride}, fontFamily=${newSettings.fontFamily}, fontSizePx=${newSettings.fontSizePx}")
-                    runCatching { runPipeline(project) }
-                        .onFailure { log.warn("Pipeline failed after settings change for '${project.name}'", it) }
+                    log.info("Settings changed for '${project.name}': override=${newSettings.identifierOverride}, fontFamily=${newSettings.fontFamily}, fontSizePx=${newSettings.fontSizePx}, textColorArgb=${newSettings.textColorArgb}")
+                    rerunPipelineAsync(project)
                 }
             }
         )
         log.info("Subscribed to Project Identifier settings changes for project '${project.name}'")
     }
 
-    private fun runPipeline(project: Project) {
+    private fun rerunPipelineAsync(project: Project) {
+        val app = ApplicationManager.getApplication()
+        app.executeOnPooledThread {
+            val result = runCatching { runPipelineComputeAndPersist(project) }
+                .onFailure { t -> log.warn("Pipeline failed in background for '${project.name}'", t) }
+                .getOrNull()
+
+            if (result == null) return@executeOnPooledThread
+            if (!result.shouldApply) {
+                log.info("No image to apply for '${project.name}'")
+                return@executeOnPooledThread
+            }
+
+            app.invokeLater({
+                try {
+                    log.info("Pipeline step: apply background via port (EDT)")
+                    val backgroundSetter = project.getService(BackgroundImagePort::class.java)
+                    backgroundSetter.setBackgroundImage(result.imagePath)
+                    log.info("Applied project identifier watermark for '${result.projectName}' at '${result.imagePath}'")
+                } catch (t: Throwable) {
+                    log.warn("Failed to apply background image on EDT for '${project.name}'", t)
+                }
+            }, ModalityState.any())
+        }
+    }
+
+    private data class PipelineResult(
+        val imagePath: Path,
+        val projectName: String,
+        val shouldApply: Boolean,
+    )
+
+    private fun runPipelineComputeAndPersist(project: Project): PipelineResult? {
         log.info("Pipeline step: load settings for project '${project.name}'")
         val settings = project.getService(SettingsPort::class.java).load()
-        log.info("Settings loaded (project-scoped): enabled=${settings.enabled}, override=${settings.identifierOverride}, fontFamily=${settings.fontFamily}, fontSizePx=${settings.fontSizePx}")
-        if (!settings.enabled) {
-            log.info("Project Identifier is disabled; skipping background application for '${project.name}'")
-            return
-        }
+        log.info("Settings loaded (project-scoped): override=${settings.identifierOverride}, fontFamily=${settings.fontFamily}, fontSizePx=${settings.fontSizePx}, textColorArgb=${settings.textColorArgb}")
 
         val projectName = project.name
         log.info("Pipeline step: derive identifier (projectName='$projectName', hasOverride=${settings.identifierOverride != null})")
@@ -76,8 +103,8 @@ class ProjectStartupActivity : ProjectActivity {
             }
             if ("JetBrains Mono" in available) "JetBrains Mono" else null
         }
-        val imageBytes = imageService.renderPng(text, effectiveFontFamily, settings.fontSizePx)
-        log.info("Image rendered: ${imageBytes.size} bytes (font='${effectiveFontFamily ?: settings.fontFamily}')")
+        val imageBytes = imageService.renderPng(text, effectiveFontFamily, settings.fontSizePx, settings.textColorArgb)
+        log.info("Image rendered: ${imageBytes.size} bytes (font='${effectiveFontFamily ?: settings.fontFamily}', colorArgb='${settings.textColorArgb}')")
 
         log.info("Pipeline step: resolve image path")
         val imagePath = resolveImagePath(project, text)
@@ -104,12 +131,7 @@ class ProjectStartupActivity : ProjectActivity {
         Files.write(imagePath, imageBytes)
         log.info("Image written to '$imagePath' (${imageBytes.size} bytes)")
 
-        // Apply via port
-        log.info("Pipeline step: apply background via port")
-        val backgroundSetter = project.getService(BackgroundImagePort::class.java)
-        backgroundSetter.setBackgroundImage(imagePath)
-
-        log.info("Applied project identifier watermark for '$projectName' at '$imagePath'")
+        return PipelineResult(imagePath = imagePath, projectName = projectName, shouldApply = true)
     }
 
     private fun resolveImagePath(project: Project, text: String): Path {
