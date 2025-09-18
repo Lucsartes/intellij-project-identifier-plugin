@@ -2,6 +2,7 @@
 <idea-plugin>
     <id>com.github.lucsartes.intellijprojectidentifierplugin</id>
     <name>Project Identifier</name>
+    <description>Adds a subtle, low-opacity text watermark to the editor background per project to help distinguish multiple open projects.</description>
     <vendor>lucsartes</vendor>
 
     <depends>com.intellij.modules.platform</depends>
