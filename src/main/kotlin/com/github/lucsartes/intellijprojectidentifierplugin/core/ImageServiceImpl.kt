@@ -1,7 +1,7 @@
 package com.github.lucsartes.intellijprojectidentifierplugin.core
 
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.ImageService
-import com.intellij.ui.Gray
+import com.intellij.ui.JBColor
 import java.awt.AlphaComposite
 import java.awt.Font
 import java.awt.GraphicsEnvironment
@@ -78,7 +78,7 @@ class ImageServiceImpl : ImageService {
             // Draw text with low opacity for watermark effect
             g2d.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, CoreDefaults.WATERMARK_ALPHA)
             g2d.font = baseFont
-            g2d.color = Gray._255
+            g2d.color = JBColor.WHITE
 
             // Position so that top touches image's top, left touches image's left
             val x = 0
