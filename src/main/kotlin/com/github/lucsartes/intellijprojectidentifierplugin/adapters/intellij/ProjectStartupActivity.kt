@@ -1,9 +1,9 @@
 package com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij
 
-import com.github.lucsartes.intellijprojectidentifierplugin.ports.IdentifierService
-import com.github.lucsartes.intellijprojectidentifierplugin.ports.ImageService
 import com.github.lucsartes.intellijprojectidentifierplugin.core.PluginSettings
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.BackgroundImagePort
+import com.github.lucsartes.intellijprojectidentifierplugin.ports.IdentifierService
+import com.github.lucsartes.intellijprojectidentifierplugin.ports.ImageService
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.PathManager
@@ -14,7 +14,7 @@ import java.awt.GraphicsEnvironment
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.UUID
+import java.util.*
 
 /**
  * Main entry point: runs on project open and orchestrates the pipeline

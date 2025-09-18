@@ -4,9 +4,7 @@ import com.github.lucsartes.intellijprojectidentifierplugin.ports.BackgroundImag
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.wm.impl.IdeBackgroundUtil
-import java.io.File
 import java.nio.file.Path
 
 /**
@@ -34,24 +32,19 @@ class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundI
             // Read existing editor background property to preserve user-customized options (opacity, style, anchor)
             val existing = props.getValue(IdeBackgroundUtil.EDITOR_PROP)?.trim()
 
-            // Default values if none exist
-            val defaultOpacityPercent = 50
-            val defaultStyle = "plain"
-            val defaultAnchor = "bottom_right"
-
-            // Determine effective values
+            // Determine effective values and defaults
             val (effectiveOpacity, effectiveStyle, effectiveAnchor) = if (!existing.isNullOrBlank()) {
                 // Expected format: "<path>,<opacity%>,<style>,<anchor>"
                 val parts = existing.split(',')
                 val parsedOpacity = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 100)
-                val rawOpacity = parsedOpacity ?: defaultOpacityPercent
-                val op = if (rawOpacity >= 50) rawOpacity else 50
-                val st = parts.getOrNull(2)?.ifBlank { null } ?: defaultStyle
-                val an = parts.getOrNull(3)?.ifBlank { null } ?: defaultAnchor
+                val rawOpacity = parsedOpacity ?: BackgroundPropertiesConstants.DEFAULT_OPACITY_PERCENT
+                val op = if (rawOpacity >= BackgroundPropertiesConstants.MIN_EFFECTIVE_OPACITY_PERCENT) rawOpacity else BackgroundPropertiesConstants.MIN_EFFECTIVE_OPACITY_PERCENT
+                val st = parts.getOrNull(2)?.ifBlank { null } ?: BackgroundPropertiesConstants.DEFAULT_STYLE
+                val an = parts.getOrNull(3)?.ifBlank { null } ?: BackgroundPropertiesConstants.DEFAULT_ANCHOR
                 Triple(op, st, an)
             } else {
-                val op = if (defaultOpacityPercent >= 50) defaultOpacityPercent else 50
-                Triple(op, defaultStyle, defaultAnchor)
+                val op = if (BackgroundPropertiesConstants.DEFAULT_OPACITY_PERCENT >= BackgroundPropertiesConstants.MIN_EFFECTIVE_OPACITY_PERCENT) BackgroundPropertiesConstants.DEFAULT_OPACITY_PERCENT else BackgroundPropertiesConstants.MIN_EFFECTIVE_OPACITY_PERCENT
+                Triple(op, BackgroundPropertiesConstants.DEFAULT_STYLE, BackgroundPropertiesConstants.DEFAULT_ANCHOR)
             }
 
             val newProp = "$absolutePath,$effectiveOpacity,$effectiveStyle,$effectiveAnchor"
@@ -61,10 +54,10 @@ class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundI
 
             // Also set individual keys so the Settings UI stays in sync
             try {
-                props.setValue("ide.background.opacity", effectiveOpacity.toString())
-                props.setValue("ide.background.fill", effectiveStyle)
-                props.setValue("ide.background.anchor", effectiveAnchor)
-                props.setValue("ide.background.for.project", projectScoped.toString())
+                props.setValue(BackgroundPropertiesConstants.KEY_OPACITY, effectiveOpacity.toString())
+                props.setValue(BackgroundPropertiesConstants.KEY_FILL, effectiveStyle)
+                props.setValue(BackgroundPropertiesConstants.KEY_ANCHOR, effectiveAnchor)
+                props.setValue(BackgroundPropertiesConstants.KEY_FOR_PROJECT, projectScoped.toString())
             } catch (ignored: Throwable) {
                 // Best-effort sync with Settings UI; ignore failures of legacy keys
                 log.debug("Failed to set one of the legacy background properties", ignored)

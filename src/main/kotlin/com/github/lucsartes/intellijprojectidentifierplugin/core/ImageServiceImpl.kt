@@ -1,7 +1,11 @@
 package com.github.lucsartes.intellijprojectidentifierplugin.core
 
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.ImageService
-import java.awt.*
+import com.intellij.ui.Gray
+import java.awt.AlphaComposite
+import java.awt.Font
+import java.awt.GraphicsEnvironment
+import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.util.logging.Logger
@@ -10,7 +14,7 @@ import javax.imageio.ImageIO
 /**
  * AWT-based implementation of ImageService that renders a transparent PNG with
  * the provided text tightly cropped to the top-left, plus a 50px margin on the
- * right and bottom.
+ * right and a 10 px margin on the bottom.
  *
  * Notes:
  * - Uses only JDK AWT/Swing APIs, which work in headless mode.
@@ -20,19 +24,15 @@ class ImageServiceImpl : ImageService {
 
     private val log: Logger = Logger.getLogger(ImageServiceImpl::class.java.name)
 
-    // Convenience overload for tests/Java callers that rely on a single-arg version.
-    // Delegates to the full signature with defaults.
-    fun renderPng(text: String): ByteArray = renderPng(text, null, null)
 
     override fun renderPng(text: String, fontFamily: String?, fontSizePx: Int?): ByteArray {
-        val inputPreview = if (text.length > 64) text.take(64) + "…" else text
+        val inputPreview = if (text.length > CoreDefaults.LOG_PREVIEW_LENGTH) text.take(CoreDefaults.LOG_PREVIEW_LENGTH) + "…" else text
         log.info("Rendering PNG for text (len=${text.length}): '$inputPreview'")
 
         val textToDraw = text.ifBlank { "" }
 
         // Determine effective font family and size
-        val defaultSize = ((108 * 4) / 3).coerceAtLeast(12)
-        val effectiveFontSize = (fontSizePx ?: defaultSize).coerceAtLeast(1)
+        val effectiveFontSize = (fontSizePx ?: CoreDefaults.DEFAULT_FONT_SIZE_PX).coerceAtLeast(CoreDefaults.MIN_FONT_SIZE_PX)
         val availableFamilies = try {
             GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()
         } catch (t: Throwable) {
@@ -59,11 +59,9 @@ class ImageServiceImpl : ImageService {
             return toPngBytes(BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB))
         }
 
-        // Canvas size: text flush to top-left, plus 50px on right and bottom
-        val marginRight = 50
-        val marginBottom = 10
-        val width = (textWidth + marginRight).coerceAtLeast(1)
-        val height = (ascent + descent + marginBottom).coerceAtLeast(1)
+        // Canvas size: text flush to top-left, margins on right/bottom
+        val width = (textWidth + CoreDefaults.MARGIN_RIGHT_PX).coerceAtLeast(1)
+        val height = (ascent + descent + CoreDefaults.MARGIN_BOTTOM_PX).coerceAtLeast(1)
 
         val image = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
         val g2d = image.createGraphics()
@@ -78,9 +76,9 @@ class ImageServiceImpl : ImageService {
             g2d.fillRect(0, 0, width, height)
 
             // Draw text with low opacity for watermark effect
-            g2d.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.15f)
+            g2d.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, CoreDefaults.WATERMARK_ALPHA)
             g2d.font = baseFont
-            g2d.color = Color(255, 255, 255)
+            g2d.color = Gray._255
 
             // Position so that top touches image's top, left touches image's left
             val x = 0

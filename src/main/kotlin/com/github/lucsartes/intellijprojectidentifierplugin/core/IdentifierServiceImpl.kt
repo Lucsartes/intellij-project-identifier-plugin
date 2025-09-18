@@ -23,13 +23,12 @@ class IdentifierServiceImpl : IdentifierService {
             return ""
         }
 
-        log.info("Generating identifier for projectName='${projectName.take(64)}' (len=${projectName.length})")
+        log.info("Generating identifier for projectName='${projectName.take(CoreDefaults.LOG_PREVIEW_LENGTH)}' (len=${projectName.length})")
 
         // Find sequences of letters or digits (Unicode-aware), take their first char
-        val tokenRegex = Regex("[\\p{L}\\p{N}]+")
         val builder = StringBuilder()
         var tokenCount = 0
-        for (match in tokenRegex.findAll(projectName)) {
+        for (match in CoreDefaults.TOKEN_REGEX.findAll(projectName)) {
             val firstChar = match.value.first()
             builder.append(firstChar.uppercaseChar())
             tokenCount++

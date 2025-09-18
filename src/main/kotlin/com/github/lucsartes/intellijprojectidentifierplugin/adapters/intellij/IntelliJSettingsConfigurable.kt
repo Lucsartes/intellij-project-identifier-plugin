@@ -6,9 +6,9 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBCheckBox
+import java.awt.GraphicsEnvironment
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
-import java.awt.GraphicsEnvironment
 import java.awt.Insets
 import javax.swing.*
 
@@ -29,7 +29,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
 
     // Cached defaults used for rendering labels like "(Default)"
     private var defaultFontFamily: String? = null
-    private val defaultFontSizePx: Int = 144
+    private val defaultFontSizePx: Int = com.github.lucsartes.intellijprojectidentifierplugin.core.CoreDefaults.DEFAULT_FONT_SIZE_PX
 
     override fun getId(): String = "com.github.lucsartes.intellijprojectidentifierplugin.settings"
 
@@ -88,11 +88,11 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                     // back to SansSerif in the core (see ImageServiceImpl). We also filter this list by
                     // what the JRE reports as available to keep it relevant on the current OS.
                     val curated = listOf(
-                        "Arial","Helvetica","Times New Roman","Times","Courier New","Courier","Verdana","Tahoma","Trebuchet MS","Georgia",
-                        "Palatino","Garamond","Bookman","Comic Sans MS","Candara","Calibri","Cambria","Constantia","Consolas","Lucida Console",
-                        "Lucida Sans","Lucida Sans Unicode","Segoe UI","Segoe UI Emoji","Menlo","Monaco","Avenir","Avenir Next","Optima","Gill Sans",
-                        "Franklin Gothic Medium","Century Gothic","Baskerville","Didot","Futura","Rockwell","Goudy Old Style","Copperplate","DejaVu Sans","DejaVu Serif",
-                        "DejaVu Sans Mono","Liberation Sans","Liberation Serif","Liberation Mono","Noto Sans","Noto Serif","Noto Sans Mono","Ubuntu","Ubuntu Mono","JetBrains Mono"
+                        "Arial", "Helvetica", "Times New Roman", "Times", "Courier New", "Courier", "Verdana", "Tahoma", "Trebuchet MS", "Georgia",
+                        "Palatino", "Garamond", "Bookman", "Comic Sans MS", "Candara", "Calibri", "Cambria", "Constantia", "Consolas", "Lucida Console",
+                        "Lucida Sans", "Lucida Sans Unicode", "Segoe UI", "Segoe UI Emoji", "Menlo", "Monaco", "Avenir", "Avenir Next", "Optima", "Gill Sans",
+                        "Franklin Gothic Medium", "Century Gothic", "Baskerville", "Didot", "Futura", "Rockwell", "Goudy Old Style", "Copperplate", "DejaVu Sans", "DejaVu Serif",
+                        "DejaVu Sans Mono", "Liberation Sans", "Liberation Serif", "Liberation Mono", "Noto Sans", "Noto Serif", "Noto Sans Mono", "Ubuntu", "Ubuntu Mono", "JetBrains Mono"
                     )
                     val available = try {
                         GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()

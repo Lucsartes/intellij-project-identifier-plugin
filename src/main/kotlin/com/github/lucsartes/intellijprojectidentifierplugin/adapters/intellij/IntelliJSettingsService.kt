@@ -2,7 +2,6 @@ package com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij
 
 import com.github.lucsartes.intellijprojectidentifierplugin.core.PluginSettings
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
