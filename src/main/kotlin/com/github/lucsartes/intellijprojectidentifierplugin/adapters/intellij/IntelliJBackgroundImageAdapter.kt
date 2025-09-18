@@ -33,18 +33,15 @@ class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundI
             val existing = props.getValue(IdeBackgroundUtil.EDITOR_PROP)?.trim()
 
             // Determine effective values and defaults
-            val (effectiveOpacity, effectiveStyle, effectiveAnchor) = if (!existing.isNullOrBlank()) {
-                // Expected format: "<path>,<opacity%>,<style>,<anchor>"
-                val parts = existing.split(',')
-                val parsedOpacity = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 100)
-                val rawOpacity = parsedOpacity ?: BackgroundPropertiesConstants.DEFAULT_OPACITY_PERCENT
-                val op = if (rawOpacity >= BackgroundPropertiesConstants.MIN_EFFECTIVE_OPACITY_PERCENT) rawOpacity else BackgroundPropertiesConstants.MIN_EFFECTIVE_OPACITY_PERCENT
-                val st = parts.getOrNull(2)?.ifBlank { null } ?: BackgroundPropertiesConstants.DEFAULT_STYLE
-                val an = parts.getOrNull(3)?.ifBlank { null } ?: BackgroundPropertiesConstants.DEFAULT_ANCHOR
+            // New logic: if opacity already set, use it; otherwise default to 15
+            val (effectiveOpacity, effectiveStyle, effectiveAnchor) = run {
+                val parts = existing?.split(',')
+                val existingOpacityFromCombined = parts?.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 100)
+                val existingOpacityFromLegacy = props.getValue(BackgroundPropertiesConstants.KEY_OPACITY)?.toIntOrNull()?.coerceIn(0, 100)
+                val op = existingOpacityFromCombined ?: existingOpacityFromLegacy ?: BackgroundPropertiesConstants.DEFAULT_OPACITY_PERCENT
+                val st = parts?.getOrNull(2)?.ifBlank { null } ?: BackgroundPropertiesConstants.DEFAULT_STYLE
+                val an = parts?.getOrNull(3)?.ifBlank { null } ?: BackgroundPropertiesConstants.DEFAULT_ANCHOR
                 Triple(op, st, an)
-            } else {
-                val op = if (BackgroundPropertiesConstants.DEFAULT_OPACITY_PERCENT >= BackgroundPropertiesConstants.MIN_EFFECTIVE_OPACITY_PERCENT) BackgroundPropertiesConstants.DEFAULT_OPACITY_PERCENT else BackgroundPropertiesConstants.MIN_EFFECTIVE_OPACITY_PERCENT
-                Triple(op, BackgroundPropertiesConstants.DEFAULT_STYLE, BackgroundPropertiesConstants.DEFAULT_ANCHOR)
             }
 
             val newProp = "$absolutePath,$effectiveOpacity,$effectiveStyle,$effectiveAnchor"
