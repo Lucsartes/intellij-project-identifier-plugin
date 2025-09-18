@@ -83,6 +83,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                 // Identifier override field with label
                 gbc.gridy++
                 identifierField = JTextField()
+                restrictWidth(identifierField)
                 add(labeled(identifierField, "Override identifier text (optional)"), gbc)
 
                 // Font family dropdown
@@ -171,9 +172,8 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                 add(resetLabel, gbc)
 
                 gbc.gridy++
-                val resetButton = JButton("Reset to Defaults")
-                // Make the reset button width consistent with other controls and avoid full-width stretching
-                restrictWidth(resetButton)
+                val resetButton = JButton("Reset")
+                // Keep the button compact; don't stretch it to full width
                 resetButton.addActionListener {
                     runCatching {
                         // Reset IDE background menu settings to defaults first
@@ -203,8 +203,12 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
 
                 // Hint about position/opacity settings location
                 gbc.gridy++
+                // Add extra top spacing to visually separate this hint from the settings above
+                val oldInsets2 = gbc.insets
+                gbc.insets = Insets(oldInsets2.top + 12, oldInsets2.left, oldInsets2.bottom, oldInsets2.right)
                 val hintLabel = JLabel("To change the watermark position and opacity, go to Appearance & Behavior | Appearance | Background Image.")
                 add(hintLabel, gbc)
+                gbc.insets = oldInsets2
 
 
                 gbc.gridy++
