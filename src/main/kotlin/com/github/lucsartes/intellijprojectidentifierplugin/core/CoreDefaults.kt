@@ -14,7 +14,6 @@ object CoreDefaults {
     // Image rendering defaults
     const val DEFAULT_FONT_SIZE_PX: Int = 144 // equals ((108 * 4) / 3)
     const val MIN_FONT_SIZE_PX: Int = 1
-    const val WATERMARK_ALPHA: Float = 0.15f
     const val MARGIN_RIGHT_PX: Int = 50
     const val MARGIN_BOTTOM_PX: Int = 10
 }

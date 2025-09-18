@@ -13,7 +13,6 @@ object BackgroundPropertiesConstants {
 
     // Default values when none are configured
     const val DEFAULT_OPACITY_PERCENT: Int = 15
-    const val MIN_EFFECTIVE_OPACITY_PERCENT: Int = 0
     const val DEFAULT_STYLE: String = "plain"
     const val DEFAULT_ANCHOR: String = "bottom_right"
 }
