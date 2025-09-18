@@ -20,6 +20,10 @@ class ImageServiceImpl : ImageService {
 
     private val log: Logger = Logger.getLogger(ImageServiceImpl::class.java.name)
 
+    // Convenience overload for tests/Java callers that rely on a single-arg version.
+    // Delegates to the full signature with defaults.
+    fun renderPng(text: String): ByteArray = renderPng(text, null, null)
+
     override fun renderPng(text: String, fontFamily: String?, fontSizePx: Int?): ByteArray {
         val inputPreview = if (text.length > 64) text.take(64) + "…" else text
         log.info("Rendering PNG for text (len=${text.length}): '$inputPreview'")

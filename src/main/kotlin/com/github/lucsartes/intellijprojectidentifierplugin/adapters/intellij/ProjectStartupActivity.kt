@@ -10,6 +10,7 @@ import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
+import java.awt.GraphicsEnvironment
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -62,8 +63,21 @@ class ProjectStartupActivity : ProjectActivity {
 
         log.info("Pipeline step: render PNG for identifier")
         val imageService = ApplicationManager.getApplication().getService(ImageService::class.java)
-        val imageBytes = imageService.renderPng(text, settings.fontFamily, settings.fontSizePx)
-        log.info("Image rendered: ${imageBytes.size} bytes")
+        // Prefer a bundled IntelliJ font (JetBrains Mono) when no font is specified.
+        // This keeps the core pure while offering a sensible default that aligns with IDE look & feel.
+        val effectiveFontFamily: String? = run {
+            val requested = settings.fontFamily?.ifBlank { null }
+            if (requested != null) return@run requested
+            // Only choose JetBrains Mono if the JRE reports it as available
+            val available = try {
+                GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()
+            } catch (_: Throwable) {
+                emptySet<String>()
+            }
+            if ("JetBrains Mono" in available) "JetBrains Mono" else null
+        }
+        val imageBytes = imageService.renderPng(text, effectiveFontFamily, settings.fontSizePx)
+        log.info("Image rendered: ${imageBytes.size} bytes (font='${effectiveFontFamily ?: settings.fontFamily}')")
 
         log.info("Pipeline step: resolve image path")
         val imagePath = resolveImagePath(project, text)

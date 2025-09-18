@@ -27,6 +27,10 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
     private lateinit var fontCombo: JComboBox<String>
     private lateinit var sizeCombo: JComboBox<String>
 
+    // Cached defaults used for rendering labels like "(Default)"
+    private var defaultFontFamily: String? = null
+    private val defaultFontSizePx: Int = 144
+
     override fun getId(): String = "com.github.lucsartes.intellijprojectidentifierplugin.settings"
 
     override fun getDisplayName(): String = "Project Identifier"
@@ -76,15 +80,48 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                 // Font family dropdown
                 gbc.gridy++
                 run {
-                    val fontNames = try {
-                        GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toList().sorted()
+                    // We intentionally show a curated list of popular, ASCII-named fonts instead of
+                    // every installed family. Many systems expose hundreds of families whose names or
+                    // glyph coverage render as tofu (small rectangles) in the dropdown, making the UI hard
+                    // to read. Starting simple avoids that UX issue while we evaluate a richer picker.
+                    // If a selected font is not installed on this machine, rendering will gracefully fall
+                    // back to SansSerif in the core (see ImageServiceImpl). We also filter this list by
+                    // what the JRE reports as available to keep it relevant on the current OS.
+                    val curated = listOf(
+                        "Arial","Helvetica","Times New Roman","Times","Courier New","Courier","Verdana","Tahoma","Trebuchet MS","Georgia",
+                        "Palatino","Garamond","Bookman","Comic Sans MS","Candara","Calibri","Cambria","Constantia","Consolas","Lucida Console",
+                        "Lucida Sans","Lucida Sans Unicode","Segoe UI","Segoe UI Emoji","Menlo","Monaco","Avenir","Avenir Next","Optima","Gill Sans",
+                        "Franklin Gothic Medium","Century Gothic","Baskerville","Didot","Futura","Rockwell","Goudy Old Style","Copperplate","DejaVu Sans","DejaVu Serif",
+                        "DejaVu Sans Mono","Liberation Sans","Liberation Serif","Liberation Mono","Noto Sans","Noto Serif","Noto Sans Mono","Ubuntu","Ubuntu Mono","JetBrains Mono"
+                    )
+                    val available = try {
+                        GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()
                     } catch (t: Throwable) {
-                        emptyList<String>()
+                        emptySet<String>()
                     }
+                    val fontNames = if (available.isEmpty()) curated else curated.filter { it in available }
+                    // Determine the default font used by the app pipeline when none is selected.
+                    defaultFontFamily = fontNames.firstOrNull { it == "JetBrains Mono" }
                     val model = DefaultComboBoxModel<String>()
-                    model.addElement("(Default)")
                     fontNames.forEach { model.addElement(it) }
                     fontCombo = JComboBox(model)
+                    // Render each entry using its own font and annotate the default choice.
+                    fontCombo.renderer = object : DefaultListCellRenderer() {
+                        override fun getListCellRendererComponent(list: JList<*>, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean): java.awt.Component {
+                            val c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus) as JLabel
+                            val name = value as? String
+                            if (name != null) {
+                                val isDefault = (defaultFontFamily != null && name == defaultFontFamily)
+                                c.text = if (isDefault) "$name (Default)" else name
+                                try {
+                                    c.font = c.font.deriveFont(java.awt.Font.PLAIN).let { base -> java.awt.Font(name, base.style, base.size) }
+                                } catch (_: Throwable) {
+                                    // If font instantiation fails, keep default label font.
+                                }
+                            }
+                            return c
+                        }
+                    }
                     add(labeled(fontCombo, "Font family"), gbc)
                 }
 
@@ -92,12 +129,29 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                 gbc.gridy++
                 run {
                     val model = DefaultComboBoxModel<String>()
-                    model.addElement("(Default)")
-                    val sizes = listOf(8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72)
+                    val sizes = listOf(72, 80, 96, 112, 128, 144, 160, 192, 224, 256)
                     sizes.forEach { model.addElement(it.toString()) }
                     sizeCombo = JComboBox(model)
+                    // Renderer that appends (Default) to the 144px entry
+                    sizeCombo.renderer = object : DefaultListCellRenderer() {
+                        override fun getListCellRendererComponent(list: JList<*>, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean): java.awt.Component {
+                            val c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus) as JLabel
+                            val txt = (value as? String)
+                            if (txt != null) {
+                                val isDefault = txt.toIntOrNull() == defaultFontSizePx
+                                c.text = if (isDefault) "$txt (Default)" else txt
+                            }
+                            return c
+                        }
+                    }
                     add(labeled(sizeCombo, "Text size (px)"), gbc)
                 }
+
+
+                // Hint about position/opacity settings location
+                gbc.gridy++
+                val hintLabel = JLabel("To change the watermark position and opacity, go to Appearance & Behavior | Appearance | Background Image.")
+                add(hintLabel, gbc)
 
                 gbc.gridy++
                 gbc.weighty = 1.0
@@ -114,8 +168,11 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
         val s = service.load()
         val uiEnabled = enabledCheckBox.isSelected
         val uiIdentifier = identifierField.text.ifBlank { null }
-        val uiFont = (if (this::fontCombo.isInitialized) fontCombo.selectedItem as? String else null)?.let { if (it == "(Default)") null else it }
-        val uiSizePx = (if (this::sizeCombo.isInitialized) sizeCombo.selectedItem as? String else null)?.toIntOrNull()
+        val selectedFont = (if (this::fontCombo.isInitialized) fontCombo.selectedItem as? String else null)
+        val uiFont = selectedFont?.let { if (defaultFontFamily != null && it == defaultFontFamily) null else it }
+        val selectedSizeStr = (if (this::sizeCombo.isInitialized) sizeCombo.selectedItem as? String else null)
+        val selectedSize = selectedSizeStr?.toIntOrNull()
+        val uiSizePx = selectedSize?.let { if (it == defaultFontSizePx) null else it }
         val modified = (uiEnabled != s.enabled) ||
                 (uiIdentifier != s.identifierOverride) ||
                 (uiFont != s.fontFamily) ||
@@ -125,8 +182,10 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
     }
 
     override fun apply() {
-        val uiFont = (fontCombo.selectedItem as? String)?.let { if (it == "(Default)") null else it }
-        val uiSizePx = (sizeCombo.selectedItem as? String)?.toIntOrNull()
+        val selectedFont = (fontCombo.selectedItem as? String)
+        val uiFont = selectedFont?.let { if (defaultFontFamily != null && it == defaultFontFamily) null else it }
+        val selectedSize = (sizeCombo.selectedItem as? String)?.toIntOrNull()
+        val uiSizePx = selectedSize?.let { if (it == defaultFontSizePx) null else it }
         val settings = PluginSettings(
             enabled = enabledCheckBox.isSelected,
             identifierOverride = identifierField.text.ifBlank { null },
@@ -150,22 +209,34 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
             var found = false
             for (i in 0 until count) {
                 val v = model.getElementAt(i)
-                if (desired == null && v == "(Default)" || desired != null && v == desired) {
+                if (desired != null && v == desired) {
                     fontCombo.selectedIndex = i
                     found = true
                     break
                 }
             }
             if (!found) {
-                // if desired font isn't available, fall back to Default
-                fontCombo.selectedIndex = 0
+                // If no explicit font set, select the computed default if present, otherwise first item.
+                val fallback = defaultFontFamily
+                if (fallback != null) {
+                    for (i in 0 until count) {
+                        if (model.getElementAt(i) == fallback) {
+                            fontCombo.selectedIndex = i
+                            found = true
+                            break
+                        }
+                    }
+                }
+                if (!found) {
+                    fontCombo.selectedIndex = 0
+                }
             }
         }
         // Size selection
         run {
             val desired = s.fontSizePx
             val model = sizeCombo.model
-            val asString = desired?.toString() ?: "(Default)"
+            val asString = (desired ?: defaultFontSizePx).toString()
             val count = model.size
             var found = false
             for (i in 0 until count) {
@@ -182,6 +253,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                     (model as DefaultComboBoxModel<String>).addElement(asString)
                     sizeCombo.selectedItem = asString
                 } else {
+                    // should not happen as default size is in the list
                     sizeCombo.selectedIndex = 0
                 }
             }
