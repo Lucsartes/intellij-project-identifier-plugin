@@ -3,12 +3,16 @@
     <id>com.github.lucsartes.intellijprojectidentifierplugin</id>
     <name>Project Identifier</name>
     <description>Adds a subtle, low-opacity text watermark to the editor background per project to help distinguish multiple open projects.</description>
-    <vendor>lucsartes</vendor>
+    <vendor email="lucsartes.xels@gmail.com">Lucsartes</vendor>
     <resource-bundle>messages.MyBundle</resource-bundle>
+
+	<version>1.0.0</version>
 
     <depends>com.intellij.modules.platform</depends>
 
-    <extensions defaultExtensionNs="com.intellij">
+	<resource-bundle>messages.MyBundle</resource-bundle>
+
+	<extensions defaultExtensionNs="com.intellij">
         <!-- Project-level service that persists settings and implements SettingsPort -->
         <projectService 
             serviceInterface="com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort"
