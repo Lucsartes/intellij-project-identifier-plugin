@@ -36,4 +36,8 @@
             displayName="Project Identifier"
             parentId="appearance"/>
     </extensions>
+
+	<extensions defaultExtensionNs="com.intellij">
+		<errorHandler implementation="com.intellij.diagnostic.JetBrainsMarketplaceErrorReportSubmitter"/>
+	</extensions>
 </idea-plugin>
