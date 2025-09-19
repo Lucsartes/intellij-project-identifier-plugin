@@ -9,6 +9,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.ui.ColorPanel
 import com.intellij.ide.HelpTooltip
 import com.intellij.icons.AllIcons
+import com.github.lucsartes.intellijprojectidentifierplugin.MyBundle
 import java.awt.Color
 import java.awt.GraphicsEnvironment
 import java.awt.GridBagConstraints
@@ -38,7 +39,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
 
     override fun getId(): String = "com.github.lucsartes.intellijprojectidentifierplugin.settings"
 
-    override fun getDisplayName(): String = "Project Identifier"
+    override fun getDisplayName(): String = MyBundle.message("settings.title")
 
     override fun getPreferredFocusedComponent(): JComponent? = if (this::identifierField.isInitialized) identifierField else null
 
@@ -86,7 +87,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                 gbc.gridy++
                 identifierField = JTextField()
                 restrictWidth(identifierField)
-                add(labeled(identifierField, "Override identifier text (optional)"), gbc)
+                add(labeled(identifierField, MyBundle.message("settings.identifier.override.label")), gbc)
 
                 // Font family dropdown
                 gbc.gridy++
@@ -123,7 +124,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                             val name = value as? String
                             if (name != null) {
                                 val isDefault = (defaultFontFamily != null && name == defaultFontFamily)
-                                c.text = if (isDefault) "$name (Default)" else name
+                                c.text = if (isDefault) MyBundle.message("default.annotated.value", name) else name
                                 try {
                                     c.font = c.font.deriveFont(java.awt.Font.PLAIN).let { base -> java.awt.Font(name, base.style, base.size) }
                                 } catch (_: Throwable) {
@@ -134,7 +135,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                         }
                     }
                     restrictWidth(fontCombo)
-                    add(labeled(fontCombo, "Font family"), gbc)
+                    add(labeled(fontCombo, MyBundle.message("settings.font.family.label")), gbc)
                 }
 
                 // Text size dropdown (pixels)
@@ -151,13 +152,13 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                             val txt = (value as? String)
                             if (txt != null) {
                                 val isDefault = txt.toIntOrNull() == defaultFontSizePx
-                                c.text = if (isDefault) "$txt (Default)" else txt
+                                c.text = if (isDefault) MyBundle.message("default.annotated.value", txt) else txt
                             }
                             return c
                         }
                     }
                     restrictWidth(sizeCombo)
-                    add(labeled(sizeCombo, "Text size (px)"), gbc)
+                    add(labeled(sizeCombo, MyBundle.message("settings.text.size.px.label")), gbc)
                 }
 
 
@@ -166,15 +167,15 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                 colorPanel = ColorPanel()
                 colorPanel.selectedColor = Color.WHITE
                 restrictWidth(colorPanel)
-                add(labeled(colorPanel, "Text color"), gbc)
+                add(labeled(colorPanel, MyBundle.message("settings.text.color.label")), gbc)
 
                 // Reset to defaults label and button
                 gbc.gridy++
-                val resetLabel = JLabel("Reset all settings to default values")
+                val resetLabel = JLabel(MyBundle.message("settings.reset.label"))
                 add(resetLabel, gbc)
 
                 gbc.gridy++
-                val resetButton = JButton("Reset")
+                val resetButton = JButton(MyBundle.message("settings.reset.button"))
                 // Keep the button compact; don't stretch it to full width
                 resetButton.addActionListener {
                     runCatching {
@@ -208,7 +209,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                 // Add extra top spacing to visually separate this hint from the settings above
                 val oldInsets2 = gbc.insets
                 gbc.insets = Insets(oldInsets2.top + 12, oldInsets2.left, oldInsets2.bottom, oldInsets2.right)
-                val hintLabel = JLabel("To change the watermark position and opacity, go to Appearance & Behavior | Appearance | Background Image.")
+                val hintLabel = JLabel(MyBundle.message("settings.hint.label"))
                 val hintPanel = JPanel().apply {
                     layout = BoxLayout(this, BoxLayout.X_AXIS)
                     alignmentX = JComponent.LEFT_ALIGNMENT
@@ -216,8 +217,8 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                     add(Box.createHorizontalStrut(6))
                     val helpIcon = JLabel(AllIcons.General.ContextHelp)
                     HelpTooltip()
-                        .setTitle("Why are some settings in another menu?")
-                        .setDescription("This plugin renders a transparent image with your project identifier and applies it using the IDE's Background Image feature. Image-related options like position, opacity, and scaling are controlled by that IDE menu. Other plugin-specific options are available here.")
+                        .setTitle(MyBundle.message("settings.hint.tooltip.title"))
+                        .setDescription(MyBundle.message("settings.hint.tooltip.description"))
                         .installOn(helpIcon)
                     add(helpIcon)
                 }

@@ -4,6 +4,7 @@
     <name>Project Identifier</name>
     <description>Adds a subtle, low-opacity text watermark to the editor background per project to help distinguish multiple open projects.</description>
     <vendor>lucsartes</vendor>
+    <resource-bundle>messages.MyBundle</resource-bundle>
 
     <depends>com.intellij.modules.platform</depends>
 
@@ -33,7 +34,8 @@
         <projectConfigurable
             instance="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.IntelliJSettingsConfigurable"
             id="com.github.lucsartes.intellijprojectidentifierplugin.settings"
-            displayName="Project Identifier"
+            bundle="messages.MyBundle"
+            key="settings.title"
             parentId="appearance"/>
     </extensions>
 
