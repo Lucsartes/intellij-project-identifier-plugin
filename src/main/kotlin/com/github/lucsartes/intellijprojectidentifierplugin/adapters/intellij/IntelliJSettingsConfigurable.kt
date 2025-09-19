@@ -7,6 +7,8 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.project.Project
 import com.intellij.ui.ColorPanel
+import com.intellij.ide.HelpTooltip
+import com.intellij.icons.AllIcons
 import java.awt.Color
 import java.awt.GraphicsEnvironment
 import java.awt.GridBagConstraints
@@ -207,7 +209,19 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                 val oldInsets2 = gbc.insets
                 gbc.insets = Insets(oldInsets2.top + 12, oldInsets2.left, oldInsets2.bottom, oldInsets2.right)
                 val hintLabel = JLabel("To change the watermark position and opacity, go to Appearance & Behavior | Appearance | Background Image.")
-                add(hintLabel, gbc)
+                val hintPanel = JPanel().apply {
+                    layout = BoxLayout(this, BoxLayout.X_AXIS)
+                    alignmentX = JComponent.LEFT_ALIGNMENT
+                    add(hintLabel)
+                    add(Box.createHorizontalStrut(6))
+                    val helpIcon = JLabel(AllIcons.General.ContextHelp)
+                    HelpTooltip()
+                        .setTitle("Why are some settings in another menu?")
+                        .setDescription("This plugin renders a transparent image with your project identifier and applies it using the IDE's Background Image feature. Image-related options like position, opacity, and scaling are controlled by that IDE menu. Other plugin-specific options are available here.")
+                        .installOn(helpIcon)
+                    add(helpIcon)
+                }
+                add(hintPanel, gbc)
                 gbc.insets = oldInsets2
 
 
