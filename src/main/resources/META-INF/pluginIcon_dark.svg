@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+	<!-- A dark gray rectangle represents the editor window, providing good contrast in light UI themes. -->
+	<rect x="4" y="4" width="32" height="32" rx="4" ry="4" fill="#A5A5A5"/>
+
+	<!-- The "ID" text is styled like a watermark: large, semi-transparent, and slightly rotated. -->
+	<text x="20" y="27"
+		  font-family="'JetBrains Mono', 'Menlo', 'monospace'"
+		  font-size="20"
+		  font-weight="bold"
+		  fill="#494949"
+		  opacity="0.25"
+		  text-anchor="middle"
+		  transform="rotate(-20 20 20)">
+		ID
+	</text>
+</svg>
