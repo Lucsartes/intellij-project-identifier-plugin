@@ -81,10 +81,10 @@ class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundI
             }
 
             val existing = props.getValue(IdeBackgroundUtil.EDITOR_PROP)?.trim()
-            val existingPath = existing?.split(',')?.getOrNull(0)?.orEmpty()
+            val existingPath = existing?.split(',')?.getOrNull(0).orEmpty()
 
             val newProp = listOf(
-                existingPath ?: "",
+                existingPath,
                 BackgroundPropertiesConstants.DEFAULT_OPACITY_PERCENT.toString(),
                 BackgroundPropertiesConstants.DEFAULT_STYLE,
                 BackgroundPropertiesConstants.DEFAULT_ANCHOR

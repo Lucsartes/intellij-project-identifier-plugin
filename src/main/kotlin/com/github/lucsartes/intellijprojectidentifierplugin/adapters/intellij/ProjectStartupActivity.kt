@@ -77,7 +77,7 @@ class ProjectStartupActivity : ProjectActivity {
         val shouldApply: Boolean,
     )
 
-    private fun runPipelineComputeAndPersist(project: Project): PipelineResult? {
+    private fun runPipelineComputeAndPersist(project: Project): PipelineResult {
         log.info("Pipeline step: load settings for project '${project.name}'")
         val settings = project.getService(SettingsPort::class.java).load()
         log.info("Settings loaded (project-scoped): override=${settings.identifierOverride}, fontFamily=${settings.fontFamily}, fontSizePx=${settings.fontSizePx}, textColorArgb=${settings.textColorArgb}")

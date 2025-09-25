@@ -78,10 +78,7 @@ class ImageServiceImpl : ImageService {
             // Draw text fully opaque; opacity should be controlled by IDE background settings only
             g2d.composite = AlphaComposite.SrcOver
             g2d.font = baseFont
-            g2d.color = run {
-                val argb = textColorArgb
-                if (argb != null) Color(argb, true) else Color.WHITE
-            }
+            g2d.color = textColorArgb?.let { Color(it, true) } ?: Color.WHITE
 
             // Position so that top touches image's top, left touches image's left
             val x = 0
