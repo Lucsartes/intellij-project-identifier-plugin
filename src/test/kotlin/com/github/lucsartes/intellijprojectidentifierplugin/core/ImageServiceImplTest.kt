@@ -13,7 +13,7 @@ class ImageServiceImplTest {
     fun renderPng_returnsNonEmptyPngBytes_forBasicText() {
         System.setProperty("java.awt.headless", "true")
 
-        val bytes = service.renderPng("Test", null, null)
+        val bytes = service.renderPng("Test")
 
         // Non-empty
         assertTrue("Expected non-empty bytes", bytes.isNotEmpty())

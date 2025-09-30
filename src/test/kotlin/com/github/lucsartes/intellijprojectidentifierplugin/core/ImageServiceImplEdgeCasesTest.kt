@@ -13,7 +13,7 @@ class ImageServiceImplEdgeCasesTest {
     @Test
     fun renderPng_returns1x1_whenTextIsBlank() {
         System.setProperty("java.awt.headless", "true")
-        val bytes = service.renderPng("", null, null)
+        val bytes = service.renderPng("")
         ByteArrayInputStream(bytes).use { bais ->
             val img = ImageIO.read(bais)
             assertTrue("ImageIO failed to read generated PNG", img != null)
@@ -51,7 +51,7 @@ class ImageServiceImplEdgeCasesTest {
     @Test
     fun renderPng_handlesInvalidFontFamilyGracefully() {
         System.setProperty("java.awt.headless", "true")
-        val bytes = service.renderPng("Sample", "DefinitelyNotARealFontFamilyName", 72)
+        val bytes = service.renderPng("Sample", "DefinitelyNotARealFontFamilyName", 72, null)
         assertTrue(bytes.isNotEmpty())
         // Ensure decodable
         ByteArrayInputStream(bytes).use { bais ->
@@ -63,7 +63,7 @@ class ImageServiceImplEdgeCasesTest {
     @Test
     fun renderPng_coercesTooSmallFontSize_andProducesPng() {
         System.setProperty("java.awt.headless", "true")
-        val bytes = service.renderPng("x", null, 0)
+        val bytes = service.renderPng("x", null, 0, null)
         assertTrue(bytes.isNotEmpty())
         ByteArrayInputStream(bytes).use { bais ->
             val img = ImageIO.read(bais)
@@ -74,7 +74,7 @@ class ImageServiceImplEdgeCasesTest {
     @Test
     fun renderPng_addsRightAndBottomMargins() {
         System.setProperty("java.awt.headless", "true")
-        val bytes = service.renderPng("A", null, 48)
+        val bytes = service.renderPng("A", null, 48, null)
         ByteArrayInputStream(bytes).use { bais ->
             val img = ImageIO.read(bais)
             assertTrue(img != null)

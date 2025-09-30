@@ -1,6 +1,6 @@
 # intellij-project-identifier-plugin
 
-This plugin was vibe coded by Jetbrains Junie coding assistant.
+Disclaimer: this plugin was vibe coded by Jetbrains Junie coding assistant.
 
 <!-- Plugin description -->
 Project Identifier helps you tell multiple IDE projects apart by adding a subtle, low-opacity text watermark to the editor background.

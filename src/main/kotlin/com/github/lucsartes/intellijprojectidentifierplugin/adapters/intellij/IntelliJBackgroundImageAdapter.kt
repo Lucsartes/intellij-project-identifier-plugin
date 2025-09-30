@@ -15,19 +15,26 @@ class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundI
 
     private val log = Logger.getInstance(IntelliJBackgroundImageAdapter::class.java)
 
+    private data class PropsResult(val props: PropertiesComponent, val projectScoped: Boolean)
+
+    private fun getPropertiesComponent(): PropsResult {
+        var projectScoped = true
+        val props = try {
+            PropertiesComponent.getInstance(project)
+        } catch (e: Throwable) {
+            log.warn("Project-scoped PropertiesComponent not available, falling back to application scope", e)
+            projectScoped = false
+            PropertiesComponent.getInstance()
+        }
+        return PropsResult(props, projectScoped)
+    }
+
     override fun setBackgroundImage(imagePath: Path) {
         try {
             val absolutePath = imagePath.toAbsolutePath().toString()
 
             // Prefer project-scoped properties when available
-            var projectScoped = true
-            val props = try {
-                PropertiesComponent.getInstance(project)
-            } catch (e: Throwable) {
-                log.warn("Project-scoped PropertiesComponent not available, falling back to application scope", e)
-                projectScoped = false
-                PropertiesComponent.getInstance()
-            }
+            val (props, projectScoped) = getPropertiesComponent()
 
             // Read existing editor background property to preserve user-customized options (opacity, style, anchor)
             val existing = props.getValue(IdeBackgroundUtil.EDITOR_PROP)?.trim()
@@ -71,14 +78,7 @@ class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundI
 
     override fun resetBackgroundSettingsToDefaults() {
         try {
-            var projectScoped = true
-            val props = try {
-                PropertiesComponent.getInstance(project)
-            } catch (e: Throwable) {
-                log.warn("Project-scoped PropertiesComponent not available, falling back to application scope", e)
-                projectScoped = false
-                PropertiesComponent.getInstance()
-            }
+            val (props, projectScoped) = getPropertiesComponent()
 
             val existing = props.getValue(IdeBackgroundUtil.EDITOR_PROP)?.trim()
             val existingPath = existing?.split(',')?.getOrNull(0).orEmpty()

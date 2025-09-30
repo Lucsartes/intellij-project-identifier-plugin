@@ -92,11 +92,6 @@ class ImageServiceImpl : ImageService {
         return toPngBytes(image)
     }
 
-    // Backward-compatible overload for existing call sites/tests that use 3 parameters
-    fun renderPng(text: String, fontFamily: String?, fontSizePx: Int?): ByteArray {
-        return renderPng(text, fontFamily, fontSizePx, null)
-    }
-
     private fun toPngBytes(image: BufferedImage): ByteArray {
         val baos = ByteArrayOutputStream()
         ImageIO.write(image, "png", baos)

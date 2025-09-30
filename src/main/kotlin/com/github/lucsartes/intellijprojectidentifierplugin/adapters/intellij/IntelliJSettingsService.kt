@@ -32,10 +32,10 @@ class IntelliJSettingsService(private val project: Project) : PersistentStateCom
     }
 
     data class State(
-        var identifierOverride: String? = PluginSettings().identifierOverride,
-        var fontFamily: String? = PluginSettings().fontFamily,
-        var fontSizePx: Int? = PluginSettings().fontSizePx,
-        var textColorArgb: Int? = PluginSettings().textColorArgb,
+        var identifierOverride: String? = null,
+        var fontFamily: String? = null,
+        var fontSizePx: Int? = null,
+        var textColorArgb: Int? = null,
     ) {
         fun toDomain(): PluginSettings = PluginSettings(
             identifierOverride = identifierOverride?.ifBlank { null },
