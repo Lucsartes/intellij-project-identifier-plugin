@@ -6,7 +6,7 @@
     <vendor email="lucsartes.xels@gmail.com">Lucsartes</vendor>
     <resource-bundle>messages.MyBundle</resource-bundle>
 
-	<version>0.0.2</version>
+	<version>0.0.3-SNAPSHOT</version>
 
     <depends>com.intellij.modules.platform</depends>
 
