@@ -16,15 +16,21 @@ When you open a project, this plugin automatically adds a unique text identifier
 The plugin automates the process of creating and applying a visual identifier. It works by:
 
 1.  Listening for project open events.
-2.  Taking the project's name and applying your chosen rules (e.g., first letter of each word) to generate a short text string.
+2.  Taking the project's name to generate a short text string.
 3.  Programmatically creating a transparent PNG image with this text and saving it to a local directory.
 4.  Using the IDE's internal API to set this newly created image as the editor background for the current project.
 
-Any changes to the plugin's settings will trigger this process again, creating a new image and updating the background automatically. The generated image file is stored locally, but you are free to change its location and manually edit the background image setting at any time.
+Any changes to the plugin's settings will trigger this process again, creating a new image and updating the background automatically. 
+The generated image file is stored locally, but you are free to edit the background image setting at any time.
 
 ## 📋 Plugin Settings
 
-The plugin provides a simple configuration panel to customize the identifier's behavior. You can access it via **File | Settings | Appearance & Behavior | Appearance**.
+The plugin provides a simple configuration panel to customize the identifier's behavior.
+You can access it via **File | Settings | Appearance & Behavior | Project Identifier Settings**.
+
+The settings are split into two sections:
+-   **Project Identifier Settings**: Global settings that apply to all projects.
+-   **Project Settings**: Settings specific to the current project, nested under the main settings menu.
 
 <!-- Plugin description end -->
 

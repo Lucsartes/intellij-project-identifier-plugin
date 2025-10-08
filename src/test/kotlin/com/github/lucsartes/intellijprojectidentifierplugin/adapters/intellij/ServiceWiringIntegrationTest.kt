@@ -1,5 +1,6 @@
 package com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij
 
+import com.github.lucsartes.intellijprojectidentifierplugin.ports.ApplicationSettingsPort
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.IdentifierService
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.ImageService
 import com.intellij.openapi.application.ApplicationManager
@@ -24,8 +25,10 @@ class ServiceWiringIntegrationTest {
 
         val identifierService = app.getService(IdentifierService::class.java)
         val imageService = app.getService(ImageService::class.java)
+        val applicationSettingsPort = app.getService(ApplicationSettingsPort::class.java)
 
         assertNotNull("IdentifierService should be registered as application service", identifierService)
         assertNotNull("ImageService should be registered as application service", imageService)
+        assertNotNull("ApplicationSettingsPort should be registered as application service", applicationSettingsPort)
     }
 }

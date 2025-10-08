@@ -22,18 +22,32 @@ class PluginXmlI18nTest {
         val bundleText = resourceBundleNodes.item(0).textContent.trim()
         assertEquals("messages.MyBundle", bundleText)
 
+        val applicationConfigurables = doc.getElementsByTagName("applicationConfigurable")
+        assertTrue("plugin.xml must have a <applicationConfigurable> entry", applicationConfigurables.length > 0)
+        val parent = applicationConfigurables.item(0)
+        val parentAttrs = parent.attributes
+
+        assertNull("displayName attribute should not be used when bundle/key are provided", parentAttrs.getNamedItem("displayName"))
+
+        val parentBundleAttr = parentAttrs.getNamedItem("bundle")
+        val parentKeyAttr = parentAttrs.getNamedItem("key")
+        assertNotNull("applicationConfigurable should declare bundle attribute", parentBundleAttr)
+        assertNotNull("applicationConfigurable should declare key attribute", parentKeyAttr)
+        assertEquals("messages.MyBundle", parentBundleAttr!!.nodeValue)
+        assertEquals("settings.parent.title", parentKeyAttr!!.nodeValue)
+
         val projectConfigurables = doc.getElementsByTagName("projectConfigurable")
         assertTrue("plugin.xml must have a <projectConfigurable> entry", projectConfigurables.length > 0)
-        val cfg = projectConfigurables.item(0)
-        val attrs = cfg.attributes
+        val child = projectConfigurables.item(0)
+        val childAttrs = child.attributes
 
-        assertNull("displayName attribute should not be used when bundle/key are provided", attrs.getNamedItem("displayName"))
+        assertNull("displayName attribute should not be used when bundle/key are provided", childAttrs.getNamedItem("displayName"))
 
-        val bundleAttr = attrs.getNamedItem("bundle")
-        val keyAttr = attrs.getNamedItem("key")
-        assertNotNull("projectConfigurable should declare bundle attribute", bundleAttr)
-        assertNotNull("projectConfigurable should declare key attribute", keyAttr)
-        assertEquals("messages.MyBundle", bundleAttr!!.nodeValue)
-        assertEquals("settings.title", keyAttr!!.nodeValue)
+        val childBundleAttr = childAttrs.getNamedItem("bundle")
+        val childKeyAttr = childAttrs.getNamedItem("key")
+        assertNotNull("projectConfigurable should declare bundle attribute", childBundleAttr)
+        assertNotNull("projectConfigurable should declare key attribute", childKeyAttr)
+        assertEquals("messages.MyBundle", childBundleAttr!!.nodeValue)
+        assertEquals("settings.child.title", childKeyAttr!!.nodeValue)
     }
 }

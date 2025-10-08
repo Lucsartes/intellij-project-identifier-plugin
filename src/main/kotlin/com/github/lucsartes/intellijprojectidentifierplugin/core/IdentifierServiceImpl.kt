@@ -17,24 +17,35 @@ class IdentifierServiceImpl : IdentifierService {
 
     private val log: Logger = Logger.getLogger(IdentifierServiceImpl::class.java.name)
 
-    override fun generate(projectName: String): String {
+    override fun generate(projectName: String, ignoredWords: Set<String>): String {
         if (projectName.isBlank()) {
             log.info("Identifier generate called with blank projectName; returning empty identifier")
             return ""
         }
 
-        log.info("Generating identifier for projectName='${projectName.take(CoreDefaults.LOG_PREVIEW_LENGTH)}' (len=${projectName.length})")
+        log.info("Generating identifier for projectName='${projectName.take(CoreDefaults.LOG_PREVIEW_LENGTH)}' (len=${projectName.length}, ignoredWords=${ignoredWords.size})")
+
+        // Normalize ignored words to lowercase for case-insensitive comparison
+        val normalizedIgnoredWords = ignoredWords.map { it.lowercase() }.toSet()
 
         // Find sequences of letters or digits (Unicode-aware), take their first char
         val builder = StringBuilder()
         var tokenCount = 0
+        var ignoredCount = 0
         for (match in CoreDefaults.TOKEN_REGEX.findAll(projectName)) {
-            val firstChar = match.value.first()
+            val token = match.value
+            // Check if this token should be ignored (case-insensitive)
+            if (normalizedIgnoredWords.contains(token.lowercase())) {
+                ignoredCount++
+                log.fine("Token '$token' ignored")
+                continue
+            }
+            val firstChar = token.first()
             builder.append(firstChar.uppercaseChar())
             tokenCount++
         }
         val result = builder.toString()
-        log.info("Identifier generated: '$result' (tokens=$tokenCount)")
+        log.info("Identifier generated: '$result' (tokens=$tokenCount, ignored=$ignoredCount)")
         return result
     }
 }

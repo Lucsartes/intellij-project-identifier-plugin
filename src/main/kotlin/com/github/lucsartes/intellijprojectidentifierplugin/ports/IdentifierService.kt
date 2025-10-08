@@ -7,6 +7,11 @@ package com.github.lucsartes.intellijprojectidentifierplugin.ports
 interface IdentifierService {
     /**
      * Derive a concise identifier string from the given project name.
+     *
+     * @param projectName The name of the project to generate an identifier from.
+     * @param ignoredWords A set of words to ignore during identifier generation (case-insensitive).
+     *                     If a token matches an ignored word, it will be excluded from the identifier.
+     *                     Defaults to an empty set if not provided.
      */
-    fun generate(projectName: String): String
+    fun generate(projectName: String, ignoredWords: Set<String> = emptySet()): String
 }

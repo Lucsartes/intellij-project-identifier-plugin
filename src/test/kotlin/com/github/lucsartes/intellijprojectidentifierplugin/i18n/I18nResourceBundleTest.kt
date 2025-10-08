@@ -1,6 +1,7 @@
 package com.github.lucsartes.intellijprojectidentifierplugin.i18n
 
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.*
 
@@ -11,7 +12,8 @@ class I18nResourceBundleTest {
     @Test
     fun `default (English) bundle loads and returns expected values`() {
         val bundle = ResourceBundle.getBundle(baseName, Locale.ROOT)
-        assertEquals("Project Identifier Settings", bundle.getString("settings.title"))
+        assertEquals("Project Identifier Settings", bundle.getString("settings.parent.title"))
+        assertEquals("Project Settings", bundle.getString("settings.child.title"))
         assertEquals("Font family", bundle.getString("settings.font.family.label"))
         assertEquals("{0} (Default)", bundle.getString("default.annotated.value"))
         assertEquals("Text size (px)", bundle.getString("settings.text.size.px.label"))
@@ -23,7 +25,8 @@ class I18nResourceBundleTest {
     @Test
     fun `french bundle loads and contains translated values`() {
         val fr = ResourceBundle.getBundle(baseName, Locale.FRENCH)
-        assertEquals("Paramètres de l'Identifiant de Projet", fr.getString("settings.title"))
+        assertEquals("Paramètres de l'identifiant de projet", fr.getString("settings.parent.title"))
+        assertEquals("Paramètres du projet", fr.getString("settings.child.title"))
         assertEquals("Famille de police", fr.getString("settings.font.family.label"))
         assertEquals("{0} (Par défaut)", fr.getString("default.annotated.value"))
         assertEquals("Taille du texte (px)", fr.getString("settings.text.size.px.label"))

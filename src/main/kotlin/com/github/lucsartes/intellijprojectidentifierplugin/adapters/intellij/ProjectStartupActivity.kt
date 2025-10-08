@@ -31,18 +31,31 @@ class ProjectStartupActivity : ProjectActivity {
         // Run once on startup in background (compute + persist), then apply on EDT
         rerunPipelineAsync(project)
 
-        // Subscribe to settings changes and rerun the pipeline asynchronously
-        val connection = project.messageBus.connect()
-        connection.subscribe(
+        // Subscribe to project-specific settings changes
+        val projectConnection = project.messageBus.connect()
+        projectConnection.subscribe(
             IntelliJSettingsService.TOPIC,
             object : IntelliJSettingsService.SettingsChangedListener {
                 override fun settingsChanged(newSettings: PluginSettings) {
-                    log.info("Settings changed for '${project.name}': override=${newSettings.identifierOverride}, fontFamily=${newSettings.fontFamily}, fontSizePx=${newSettings.fontSizePx}, textColorArgb=${newSettings.textColorArgb}")
+                    log.info("Project settings changed for '${project.name}': override=${newSettings.identifierOverride}, fontFamily=${newSettings.fontFamily}, fontSizePx=${newSettings.fontSizePx}, textColorArgb=${newSettings.textColorArgb}")
                     rerunPipelineAsync(project)
                 }
             }
         )
         log.info("Subscribed to Project Identifier settings changes for project '${project.name}'")
+
+        // Subscribe to application-level (global) settings changes
+        val appConnection = ApplicationManager.getApplication().messageBus.connect()
+        appConnection.subscribe(
+            IntelliJApplicationSettingsService.TOPIC,
+            object : IntelliJApplicationSettingsService.SettingsChangedListener {
+                override fun settingsChanged(newSettings: com.github.lucsartes.intellijprojectidentifierplugin.core.ApplicationSettings) {
+                    log.info("Application settings changed. Rerunning pipeline for project '${project.name}'. New ignored words: ${newSettings.ignoredWords}")
+                    rerunPipelineAsync(project)
+                }
+            }
+        )
+        log.info("Subscribed to Application settings changes for project '${project.name}'")
     }
 
     private fun rerunPipelineAsync(project: Project) {
@@ -82,10 +95,16 @@ class ProjectStartupActivity : ProjectActivity {
         val settings = project.getService(SettingsPort::class.java).load()
         log.info("Settings loaded (project-scoped): override=${settings.identifierOverride}, fontFamily=${settings.fontFamily}, fontSizePx=${settings.fontSizePx}, textColorArgb=${settings.textColorArgb}")
 
+        // Load application-level settings (ignored words)
+        log.info("Pipeline step: load application settings")
+        val appSettingsService = ApplicationManager.getApplication().getService(com.github.lucsartes.intellijprojectidentifierplugin.ports.ApplicationSettingsPort::class.java)
+        val appSettings = appSettingsService.load()
+        log.info("Application settings loaded: ignoredWords=${appSettings.ignoredWords}")
+
         val projectName = project.name
-        log.info("Pipeline step: derive identifier (projectName='$projectName', hasOverride=${settings.identifierOverride != null})")
+        log.info("Pipeline step: derive identifier (projectName='$projectName', hasOverride=${settings.identifierOverride != null}, ignoredWords=${appSettings.ignoredWords.size})")
         val identifierService = ApplicationManager.getApplication().getService(IdentifierService::class.java)
-        val text = settings.identifierOverride ?: identifierService.generate(projectName)
+        val text = settings.identifierOverride ?: identifierService.generate(projectName, appSettings.ignoredWords.toSet())
         log.info("Identifier resolved: '$text'")
 
         log.info("Pipeline step: render PNG for identifier")

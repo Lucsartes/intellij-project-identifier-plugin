@@ -6,7 +6,7 @@
     <vendor email="lucsartes.xels@gmail.com">Lucsartes</vendor>
     <resource-bundle>messages.MyBundle</resource-bundle>
 
-	<version>0.0.3-SNAPSHOT</version>
+	<version>0.0.3</version>
 
     <depends>com.intellij.modules.platform</depends>
 
@@ -17,6 +17,11 @@
         <projectService 
             serviceInterface="com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort"
             serviceImplementation="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.IntelliJSettingsService"/>
+
+        <!-- Application-level service that persists application settings and implements ApplicationSettingsPort -->
+        <applicationService
+            serviceInterface="com.github.lucsartes.intellijprojectidentifierplugin.ports.ApplicationSettingsPort"
+            serviceImplementation="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.IntelliJApplicationSettingsService"/>
 
         <!-- Application-level core services implementing domain ports -->
         <applicationService
@@ -34,16 +39,23 @@
         <!-- Project startup activity -->
         <postStartupActivity implementation="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.ProjectStartupActivity"/>
 
-        <!-- Settings UI under Appearance &amp; Behavior (project-scoped) -->
+        <!-- Settings UI -->
+        <applicationConfigurable
+                parentId="appearance"
+                instance="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.IntelliJApplicationSettingsConfigurable"
+                id="com.github.lucsartes.intellijprojectidentifierplugin.application.settings"
+                bundle="messages.MyBundle"
+                key="settings.parent.title"/>
+
         <projectConfigurable
-            instance="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.IntelliJSettingsConfigurable"
-            id="com.github.lucsartes.intellijprojectidentifierplugin.settings"
-            bundle="messages.MyBundle"
-            key="settings.title"
-            parentId="appearance"/>
+                parentId="com.github.lucsartes.intellijprojectidentifierplugin.application.settings"
+                instance="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.IntelliJSettingsConfigurable"
+                id="com.github.lucsartes.intellijprojectidentifierplugin.settings"
+                bundle="messages.MyBundle"
+                key="settings.child.title"/>
     </extensions>
 
-	<extensions defaultExtensionNs="com.intellij">
+    <extensions defaultExtensionNs="com.intellij">
 		<errorHandler implementation="com.intellij.diagnostic.JetBrainsMarketplaceErrorReportSubmitter"/>
 	</extensions>
 </idea-plugin>
