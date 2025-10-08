@@ -39,7 +39,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
 
     override fun getId(): String = "com.github.lucsartes.intellijprojectidentifierplugin.settings"
 
-    override fun getDisplayName(): String = MyBundle.message("settings.title")
+    override fun getDisplayName(): String = MyBundle.message("settings.child.title")
 
     override fun getPreferredFocusedComponent(): JComponent? = if (this::identifierField.isInitialized) identifierField else null
 
