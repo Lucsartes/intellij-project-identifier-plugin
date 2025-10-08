@@ -55,6 +55,8 @@ class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundI
 
             // Set combined property using IdeBackgroundUtil.EDITOR_PROP
             props.setValue(IdeBackgroundUtil.EDITOR_PROP, newProp)
+            // Also set for empty frame
+            props.setValue(IdeBackgroundUtil.FRAME_PROP, newProp)
 
             // Also set individual keys so the Settings UI stays in sync
             try {
@@ -92,6 +94,8 @@ class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundI
 
             // Write combined property (keeps current path if present)
             props.setValue(IdeBackgroundUtil.EDITOR_PROP, newProp)
+            // Also reset for empty frame
+            props.setValue(IdeBackgroundUtil.FRAME_PROP, newProp)
 
             // Write legacy/UI keys
             try {

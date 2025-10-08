@@ -6,7 +6,7 @@
 
 ## 1. Context
 
-The plugin adds a subtle text watermark to help distinguish multiple open IDE projects. We expose settings pages to let users control how the watermark image is generated.
+The plugin adds a subtle text watermark to the editor and empty frame backgrounds to help distinguish multiple open IDE projects. We expose settings pages to let users control how the watermark image is generated.
 
 There are multiple concerns to address:
 
@@ -21,7 +21,7 @@ We need to clarify:
 
 Related architecture decisions:
 
-- ADR-001 selection of a technical solution — we generate a transparent PNG and set it as the editor background.
+- ADR-001 selection of a technical solution — we generate a transparent PNG and set it as the editor and empty frame background.
 - ADR-002 technical architecture — core/ports/adapters separation, minimizing dependency on unstable IDE APIs.
 
 ## 2. Decision Drivers

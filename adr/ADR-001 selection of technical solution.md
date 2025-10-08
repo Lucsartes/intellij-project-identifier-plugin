@@ -1,12 +1,12 @@
 # ADR-001: Selection of Plugin Architecture for Visual Identifier
 
 * **Status**: Accepted
-* **Date**: 2025-08-21
+* **Date**: 2025-08-21 (updated 2025-10-08)
 * **Authors**: [Your Name]
 
 ## 1. Context
 
-We need to implement a JetBrains plugin that automatically adds a visual identifier to each IDE instance to help users distinguish between multiple open projects. This identifier must be a low-opacity text overlay on the editor's background, visible during task switching (e.g., using the Windows key or `Alt+Tab`).
+We need to implement a JetBrains plugin that automatically adds a visual identifier to each IDE instance to help users distinguish between multiple open projects. This identifier must be a low-opacity text overlay on the editor's background and empty frame background, visible during task switching (e.g., using the Windows key or `Alt+Tab`).
 
 The primary challenge is to find a stable and non-intrusive way to modify the IDE's UI on a per-project basis to display this text.
 
