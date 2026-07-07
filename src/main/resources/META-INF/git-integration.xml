@@ -1,0 +1,11 @@
+<!-- Loaded only when the bundled Git plugin (Git4Idea) is present and enabled (see the optional
+     <depends> in plugin.xml). Replaces the default filesystem-based BranchProvider with the
+     event-driven, Git4Idea-backed implementation. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="com.intellij">
+        <projectService
+            serviceInterface="com.github.lucsartes.intellijprojectidentifierplugin.ports.BranchProvider"
+            serviceImplementation="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.GitBranchProvider"
+            overrides="true"/>
+    </extensions>
+</idea-plugin>

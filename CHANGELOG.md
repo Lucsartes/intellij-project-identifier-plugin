@@ -3,6 +3,8 @@
 # intellij-project-identifier-plugin Changelog
 
 ## [Unreleased]
+### Added
+- Dynamic placeholders in the per-project identifier override. Use `${branch}` to embed the current Git branch in the watermark; it refreshes automatically when you switch branches. Falls back to an empty string when the project has no Git branch.
 
 ## [0.0.4] - 2025-10-09
 ### Fixed

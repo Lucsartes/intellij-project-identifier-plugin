@@ -83,11 +83,31 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                 }
 
 
-                // Identifier override field with label
+                // Identifier override field with label and a help icon documenting placeholders (e.g. ${branch})
                 gbc.gridy++
                 identifierField = JTextField()
                 restrictWidth(identifierField)
-                add(labeled(identifierField, MyBundle.message("settings.identifier.override.label")), gbc)
+                val overridePanel = JPanel().apply {
+                    layout = BoxLayout(this, BoxLayout.Y_AXIS)
+                    alignmentX = JComponent.LEFT_ALIGNMENT
+                    val labelRow = JPanel().apply {
+                        layout = BoxLayout(this, BoxLayout.X_AXIS)
+                        alignmentX = JComponent.LEFT_ALIGNMENT
+                        add(JLabel(MyBundle.message("settings.identifier.override.label")))
+                        add(Box.createHorizontalStrut(6))
+                        val helpIcon = JLabel(AllIcons.General.ContextHelp)
+                        HelpTooltip()
+                            .setTitle(MyBundle.message("settings.identifier.override.tooltip.title"))
+                            .setDescription(MyBundle.message("settings.identifier.override.tooltip.description"))
+                            .installOn(helpIcon)
+                        add(helpIcon)
+                    }
+                    add(labelRow)
+                    add(Box.createVerticalStrut(4))
+                    identifierField.alignmentX = JComponent.LEFT_ALIGNMENT
+                    add(identifierField)
+                }
+                add(overridePanel, gbc)
 
                 // Font family dropdown
                 gbc.gridy++

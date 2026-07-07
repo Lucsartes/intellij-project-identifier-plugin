@@ -32,6 +32,10 @@ The settings are split into two sections:
 -   **Project Identifier Settings**: Global settings that apply to all projects.
 -   **Project Settings**: Settings specific to the current project, nested under the main settings menu.
 
+## 🔀 Dynamic placeholders
+
+In the per-project **Identifier override** field you can embed placeholders that are resolved automatically. Type `${branch}` (for example `XXX - ${branch}`) to include the current Git branch in the watermark. The watermark refreshes automatically when you switch branches. If the project is not a Git repository (or is on a detached HEAD), `${branch}` resolves to an empty string.
+
 <!-- Plugin description end -->
 
 ## Installation

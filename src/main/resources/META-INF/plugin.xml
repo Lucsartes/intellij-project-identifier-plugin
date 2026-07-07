@@ -10,6 +10,11 @@
 
     <depends>com.intellij.modules.platform</depends>
 
+    <!-- Optional dependency on the bundled Git plugin. When present, git-integration.xml swaps in the
+         event-driven GitBranchProvider; when absent/disabled the plugin still loads and falls back to
+         reading .git/HEAD, so the ${branch} placeholder degrades gracefully. -->
+    <depends optional="true" config-file="git-integration.xml">Git4Idea</depends>
+
 	<resource-bundle>messages.MyBundle</resource-bundle>
 
 	<extensions defaultExtensionNs="com.intellij">
@@ -35,6 +40,12 @@
         <projectService
             serviceInterface="com.github.lucsartes.intellijprojectidentifierplugin.ports.BackgroundImagePort"
             serviceImplementation="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.IntelliJBackgroundImageAdapter"/>
+
+        <!-- Default BranchProvider: zero-dependency, reads .git/HEAD. Overridden by GitBranchProvider
+             (git-integration.xml) when the bundled Git plugin is available. -->
+        <projectService
+            serviceInterface="com.github.lucsartes.intellijprojectidentifierplugin.ports.BranchProvider"
+            serviceImplementation="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.FileSystemBranchProvider"/>
 
         <!-- Project startup activity -->
         <postStartupActivity implementation="com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij.ProjectStartupActivity"/>

@@ -67,6 +67,8 @@ We have decided to adopt **Strategy 1: Dynamic Image Generation**. This approach
     * The plugin's core functionality is reliant on an internal IDE property, meaning it may require maintenance with each major IDE version release.
     * File management is required to handle image creation and cleanup to prevent temporary file accumulation.
 
+> **Update 2026-07-07 (see ADR-005)**: Reading the current Git branch for the `${branch}` placeholder introduces an *optional* dependency on the bundled Git plugin (`Git4Idea`). This stays within the "reasonably accessible parts of the SDK" driver: the dependency is declared `optional`, so when Git is unavailable the plugin still loads and falls back to reading `.git/HEAD` directly, and the placeholder degrades gracefully to an empty string. The plugin's only *hard* dependency remains `com.intellij.modules.platform`.
+
 ---
 
 ## 6. Related Documents

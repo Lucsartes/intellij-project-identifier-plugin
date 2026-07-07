@@ -106,6 +106,11 @@ These settings are configured per-project and stored in the project's workspace 
     - What it does: Overrides the automatically derived project identifier text for this specific project.
     - Default: unset (derive from project name using application-level rules).
     - Scope: Project-specific.
+    - Placeholders (added 2026-07-07, see ADR-005): the override text supports dynamic placeholders of the
+      form `${name}`. Currently `${branch}` is substituted with the current Git branch name and the watermark
+      refreshes automatically when the branch changes. When there is no branch (non-Git project or detached
+      HEAD), `${branch}` is replaced with an empty string (surrounding text is preserved, not trimmed). The
+      override field carries a `HelpTooltip` documenting the supported placeholders and this fallback.
 
 - **Font family** (optional)
     - What it does: Selects the typeface used to render the watermark text. UI shows a curated list; core will fall back to a reasonable default (e.g., JetBrains Mono or SansSerif) if the requested font is unavailable.
