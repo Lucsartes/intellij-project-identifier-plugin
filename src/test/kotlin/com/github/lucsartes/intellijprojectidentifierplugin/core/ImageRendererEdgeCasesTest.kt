@@ -6,9 +6,9 @@ import org.junit.Test
 import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
 
-class ImageServiceImplEdgeCasesTest {
+class ImageRendererEdgeCasesTest {
 
-    private val service = ImageServiceImpl()
+    private val service = ImageRenderer()
 
     @Test
     fun renderPng_returns1x1_whenTextIsBlank() {

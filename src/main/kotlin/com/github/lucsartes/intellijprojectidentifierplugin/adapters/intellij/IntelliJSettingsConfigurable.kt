@@ -1,7 +1,8 @@
 package com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij
 
-import com.github.lucsartes.intellijprojectidentifierplugin.core.PluginSettings
-import com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort
+import com.github.lucsartes.intellijprojectidentifierplugin.core.FontSupport
+import com.github.lucsartes.intellijprojectidentifierplugin.core.ProjectSettings
+import com.github.lucsartes.intellijprojectidentifierplugin.ports.ProjectSettingsPort
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.BackgroundImagePort
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.options.SearchableConfigurable
@@ -15,7 +16,6 @@ import java.awt.GraphicsEnvironment
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
-import java.awt.Dimension
 import javax.swing.*
 
 /**
@@ -25,7 +25,7 @@ import javax.swing.*
 class IntelliJSettingsConfigurable(private val project: Project) : SearchableConfigurable {
 
     private val log = Logger.getInstance(IntelliJSettingsConfigurable::class.java)
-    private val service: SettingsPort by lazy { project.getService(SettingsPort::class.java) }
+    private val service: ProjectSettingsPort by lazy { project.getService(ProjectSettingsPort::class.java) }
 
     private var panel: JPanel? = null
     private lateinit var identifierField: JTextField
@@ -42,32 +42,6 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
     override fun getDisplayName(): String = MyBundle.message("settings.child.title")
 
     override fun getPreferredFocusedComponent(): JComponent? = if (this::identifierField.isInitialized) identifierField else null
-
-    private fun labeled(component: JComponent, labelText: String): JComponent {
-        return JPanel().apply {
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            alignmentX = JComponent.LEFT_ALIGNMENT
-            val label = JLabel(labelText)
-            label.alignmentX = JComponent.LEFT_ALIGNMENT
-            component.alignmentX = JComponent.LEFT_ALIGNMENT
-            add(label)
-            add(Box.createVerticalStrut(4))
-            add(component)
-        }
-    }
-
-    // Constrain the width of wide components so they don't span the whole settings page.
-    private fun restrictWidth(component: JComponent, preferredWidth: Int = 300, minWidth: Int = 160) {
-        val height = when {
-            component.preferredSize.height > 0 -> component.preferredSize.height
-            component.minimumSize.height > 0 -> component.minimumSize.height
-            else -> 24
-        }
-        val width = preferredWidth.coerceAtLeast(minWidth)
-        component.preferredSize = Dimension(width, height)
-        component.maximumSize = Dimension(width, height)
-        component.alignmentX = JComponent.LEFT_ALIGNMENT
-    }
 
     override fun createComponent(): JComponent {
         if (panel == null) {
@@ -86,7 +60,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                 // Identifier override field with label and a help icon documenting placeholders (e.g. ${branch})
                 gbc.gridy++
                 identifierField = JTextField()
-                restrictWidth(identifierField)
+                SettingsUiSupport.restrictWidth(identifierField)
                 val overridePanel = JPanel().apply {
                     layout = BoxLayout(this, BoxLayout.Y_AXIS)
                     alignmentX = JComponent.LEFT_ALIGNMENT
@@ -117,7 +91,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                     // glyph coverage render as tofu (small rectangles) in the dropdown, making the UI hard
                     // to read. Starting simple avoids that UX issue while we evaluate a richer picker.
                     // If a selected font is not installed on this machine, rendering will gracefully fall
-                    // back to SansSerif in the core (see ImageServiceImpl). We also filter this list by
+                    // back to SansSerif in the core (see ImageRenderer). We also filter this list by
                     // what the JRE reports as available to keep it relevant on the current OS.
                     val curated = listOf(
                         "Arial", "Helvetica", "Times New Roman", "Times", "Courier New", "Courier", "Verdana", "Tahoma", "Trebuchet MS", "Georgia",
@@ -133,7 +107,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                     }
                     val fontNames = if (available.isEmpty()) curated else curated.filter { it in available }
                     // Determine the default font used by the app pipeline when none is selected.
-                    defaultFontFamily = fontNames.firstOrNull { it == "JetBrains Mono" }
+                    defaultFontFamily = fontNames.firstOrNull { it == FontSupport.PREFERRED_DEFAULT }
                     val model = DefaultComboBoxModel<String>()
                     fontNames.forEach { model.addElement(it) }
                     fontCombo = JComboBox(model)
@@ -154,8 +128,8 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                             return c
                         }
                     }
-                    restrictWidth(fontCombo)
-                    add(labeled(fontCombo, MyBundle.message("settings.font.family.label")), gbc)
+                    SettingsUiSupport.restrictWidth(fontCombo)
+                    add(SettingsUiSupport.labeled(fontCombo, MyBundle.message("settings.font.family.label")), gbc)
                 }
 
                 // Text size dropdown (pixels)
@@ -177,8 +151,8 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                             return c
                         }
                     }
-                    restrictWidth(sizeCombo)
-                    add(labeled(sizeCombo, MyBundle.message("settings.text.size.px.label")), gbc)
+                    SettingsUiSupport.restrictWidth(sizeCombo)
+                    add(SettingsUiSupport.labeled(sizeCombo, MyBundle.message("settings.text.size.px.label")), gbc)
                 }
 
 
@@ -186,8 +160,8 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                 gbc.gridy++
                 colorPanel = ColorPanel()
                 colorPanel.selectedColor = Color.WHITE
-                restrictWidth(colorPanel)
-                add(labeled(colorPanel, MyBundle.message("settings.text.color.label")), gbc)
+                SettingsUiSupport.restrictWidth(colorPanel)
+                add(SettingsUiSupport.labeled(colorPanel, MyBundle.message("settings.text.color.label")), gbc)
 
                 // Reset to defaults label and button
                 gbc.gridy++
@@ -206,7 +180,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                         log.warn("Failed to reset background settings to defaults", t)
                     }
                     // Reset plugin settings to defaults and refresh UI
-                    val defaults = PluginSettings()
+                    val defaults = ProjectSettings()
                     log.info("Resetting plugin settings to defaults via UI action: override=${defaults.identifierOverride}, fontFamily=${defaults.fontFamily}, fontSizePx=${defaults.fontSizePx}, textColorArgb=${defaults.textColorArgb}")
                     service.save(defaults)
                     reset()
@@ -282,7 +256,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
         val uiSizePx = selectedSize?.let { if (it == defaultFontSizePx) null else it }
         val uiColorArgbRaw = colorPanel.selectedColor?.rgb
         val uiColorArgb = uiColorArgbRaw?.let { if (it == Color.WHITE.rgb) null else it }
-        val settings = PluginSettings(
+        val settings = ProjectSettings(
             identifierOverride = identifierField.text.ifBlank { null },
             fontFamily = uiFont,
             fontSizePx = uiSizePx,

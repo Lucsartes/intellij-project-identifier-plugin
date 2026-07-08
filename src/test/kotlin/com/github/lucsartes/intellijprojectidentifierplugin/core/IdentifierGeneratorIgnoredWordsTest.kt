@@ -1,15 +1,14 @@
 package com.github.lucsartes.intellijprojectidentifierplugin.core
 
-import com.github.lucsartes.intellijprojectidentifierplugin.ports.IdentifierService
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Tests for IdentifierServiceImpl ignored words functionality.
+ * Tests for IdentifierGenerator ignored words functionality.
  */
-class IdentifierServiceImplIgnoredWordsTest {
+class IdentifierGeneratorIgnoredWordsTest {
 
-    private val service: IdentifierService = IdentifierServiceImpl()
+    private val service = IdentifierGenerator()
 
     @Test
     fun `generate ignores words in ignored list (case-insensitive)`() {

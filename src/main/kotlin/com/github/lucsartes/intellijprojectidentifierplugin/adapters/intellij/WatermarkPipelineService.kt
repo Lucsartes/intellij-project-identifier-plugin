@@ -1,13 +1,13 @@
 package com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij
 
+import com.github.lucsartes.intellijprojectidentifierplugin.core.IdentifierGenerator
+import com.github.lucsartes.intellijprojectidentifierplugin.core.ImageRenderer
 import com.github.lucsartes.intellijprojectidentifierplugin.core.TemplateResolver
 import com.github.lucsartes.intellijprojectidentifierplugin.core.WatermarkStore
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.ApplicationSettingsPort
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.BackgroundImagePort
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.BranchProvider
-import com.github.lucsartes.intellijprojectidentifierplugin.ports.IdentifierService
-import com.github.lucsartes.intellijprojectidentifierplugin.ports.ImageService
-import com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort
+import com.github.lucsartes.intellijprojectidentifierplugin.ports.ProjectSettingsPort
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -15,7 +15,6 @@ import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import java.awt.GraphicsEnvironment
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ExecutorService
@@ -37,6 +36,8 @@ class WatermarkPipelineService(private val project: Project) : Disposable {
 
     private val log = Logger.getInstance(WatermarkPipelineService::class.java)
     private val templateResolver = TemplateResolver()
+    private val identifierGenerator = IdentifierGenerator()
+    private val imageRenderer = ImageRenderer()
     private val watermarkStore = WatermarkStore(Paths.get(PathManager.getSystemPath(), PLUGIN_DIR_ID, "watermarks"))
 
     // Single-threaded: cleanup + write from different runs cannot interleave. Virtual thread: work is I/O-bound.
@@ -76,12 +77,11 @@ class WatermarkPipelineService(private val project: Project) : Disposable {
     }
 
     private fun computeAndPersist(): PipelineResult {
-        val settings = project.getService(SettingsPort::class.java).load()
+        val settings = project.getService(ProjectSettingsPort::class.java).load()
         val appSettings = ApplicationManager.getApplication().getService(ApplicationSettingsPort::class.java).load()
 
-        val identifierService = ApplicationManager.getApplication().getService(IdentifierService::class.java)
         val base = settings.identifierOverride
-            ?: identifierService.generate(project.name, appSettings.ignoredWords.toSet())
+            ?: identifierGenerator.generate(project.name, appSettings.ignoredWords.toSet())
 
         // Only pay the cost of resolving the branch when the text actually references it.
         val branch = if (templateResolver.usesPlaceholder(base, TemplateResolver.BRANCH)) {
@@ -92,10 +92,9 @@ class WatermarkPipelineService(private val project: Project) : Disposable {
         val text = templateResolver.resolve(base, mapOf(TemplateResolver.BRANCH to branch))
         log.info("Resolved watermark text '$text' for '${project.name}' (branch=$branch)")
 
-        val imageService = ApplicationManager.getApplication().getService(ImageService::class.java)
-        val imageBytes = imageService.renderPng(
+        val imageBytes = imageRenderer.renderPng(
             text,
-            effectiveFontFamily(settings.fontFamily),
+            settings.fontFamily,
             settings.fontSizePx,
             settings.textColorArgb,
         )
@@ -105,16 +104,6 @@ class WatermarkPipelineService(private val project: Project) : Disposable {
         log.info("Wrote watermark image to '$imagePath' (${imageBytes.size} bytes)")
 
         return PipelineResult(imagePath, text)
-    }
-
-    /** Prefer the bundled JetBrains Mono when no font is chosen, but only if the JRE reports it available. */
-    private fun effectiveFontFamily(requested: String?): String? {
-        val explicit = requested?.ifBlank { null }
-        if (explicit != null) return explicit
-        val available = runCatching {
-            GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()
-        }.getOrDefault(emptySet())
-        return if ("JetBrains Mono" in available) "JetBrains Mono" else null
     }
 
     override fun dispose() {

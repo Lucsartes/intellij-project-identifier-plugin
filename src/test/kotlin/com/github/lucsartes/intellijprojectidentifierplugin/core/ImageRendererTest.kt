@@ -5,9 +5,9 @@ import org.junit.Test
 import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
 
-class ImageServiceImplTest {
+class ImageRendererTest {
 
-    private val service = ImageServiceImpl()
+    private val service = ImageRenderer()
 
     @Test
     fun renderPng_returnsNonEmptyPngBytes_forBasicText() {

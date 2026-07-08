@@ -3,7 +3,7 @@ package com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij
 import com.github.lucsartes.intellijprojectidentifierplugin.core.BranchChangeDetector
 import com.github.lucsartes.intellijprojectidentifierplugin.core.TemplateResolver
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.BranchProvider
-import com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort
+import com.github.lucsartes.intellijprojectidentifierplugin.ports.ProjectSettingsPort
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
@@ -28,7 +28,7 @@ class BranchWatchService(private val project: Project) : Disposable {
      */
     @Synchronized
     fun sync() {
-        val override = project.getService(SettingsPort::class.java).load().identifierOverride
+        val override = project.getService(ProjectSettingsPort::class.java).load().identifierOverride
         val needed = override != null && templateResolver.usesPlaceholder(override, TemplateResolver.BRANCH)
         when {
             needed && handle == null -> start()

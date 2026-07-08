@@ -3,9 +3,9 @@ package com.github.lucsartes.intellijprojectidentifierplugin.core
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class IdentifierServiceImplUnicodeTest {
+class IdentifierGeneratorUnicodeTest {
 
-    private val service = IdentifierServiceImpl()
+    private val service = IdentifierGenerator()
 
     @Test
     fun generate_handlesUnicodeLettersAndDigits() {

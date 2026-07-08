@@ -1,7 +1,7 @@
 package com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij
 
-import com.github.lucsartes.intellijprojectidentifierplugin.core.PluginSettings
-import com.github.lucsartes.intellijprojectidentifierplugin.ports.SettingsPort
+import com.github.lucsartes.intellijprojectidentifierplugin.core.ProjectSettings
+import com.github.lucsartes.intellijprojectidentifierplugin.ports.ProjectSettingsPort
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
@@ -11,17 +11,17 @@ import com.intellij.openapi.project.Project
 import com.intellij.util.messages.Topic
 
 /**
- * IntelliJ project-level service that persists PluginSettings and fulfills the SettingsPort.
+ * IntelliJ project-level service that persists ProjectSettings and fulfills the ProjectSettingsPort.
  * Lives in the adapters layer to isolate IntelliJ SDK types.
  */
 @State(
     name = "ProjectIdentifierSettings",
     storages = [Storage(StoragePathMacros.WORKSPACE_FILE)]
 )
-class IntelliJSettingsService(private val project: Project) : PersistentStateComponent<IntelliJSettingsService.State>, SettingsPort {
+class IntelliJSettingsService(private val project: Project) : PersistentStateComponent<IntelliJSettingsService.State>, ProjectSettingsPort {
 
     interface SettingsChangedListener {
-        fun settingsChanged(newSettings: PluginSettings)
+        fun settingsChanged(newSettings: ProjectSettings)
     }
 
     companion object {
@@ -37,7 +37,7 @@ class IntelliJSettingsService(private val project: Project) : PersistentStateCom
         var fontSizePx: Int? = null,
         var textColorArgb: Int? = null,
     ) {
-        fun toDomain(): PluginSettings = PluginSettings(
+        fun toDomain(): ProjectSettings = ProjectSettings(
             identifierOverride = identifierOverride?.ifBlank { null },
             fontFamily = fontFamily?.ifBlank { null },
             fontSizePx = fontSizePx,
@@ -45,7 +45,7 @@ class IntelliJSettingsService(private val project: Project) : PersistentStateCom
         )
 
         companion object {
-            fun fromDomain(settings: PluginSettings): State = State(
+            fun fromDomain(settings: ProjectSettings): State = State(
                 identifierOverride = settings.identifierOverride?.ifBlank { null },
                 fontFamily = settings.fontFamily?.ifBlank { null },
                 fontSizePx = settings.fontSizePx,
@@ -69,14 +69,14 @@ class IntelliJSettingsService(private val project: Project) : PersistentStateCom
         this.state = state
     }
 
-    // SettingsPort implementation
-    override fun load(): PluginSettings {
+    // ProjectSettingsPort implementation
+    override fun load(): ProjectSettings {
         val s = state.toDomain()
         log.info("Settings loaded (toDomain): override=${s.identifierOverride}, fontFamily=${s.fontFamily}, fontSizePx=${s.fontSizePx}, textColorArgb=${s.textColorArgb}")
         return s
     }
 
-    override fun save(settings: PluginSettings) {
+    override fun save(settings: ProjectSettings) {
         log.info("Saving settings: override=${settings.identifierOverride}, fontFamily=${settings.fontFamily}, fontSizePx=${settings.fontSizePx}, textColorArgb=${settings.textColorArgb}")
         this.state = State.fromDomain(settings)
         // publish settings changed event

@@ -9,7 +9,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.SearchableConfigurable
-import java.awt.Dimension
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
@@ -33,32 +32,6 @@ class IntelliJApplicationSettingsConfigurable : SearchableConfigurable, Configur
 
     override fun getDisplayName(): String = MyBundle.message("settings.parent.title")
 
-    private fun labeled(component: JComponent, labelText: String): JComponent {
-        return JPanel().apply {
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            alignmentX = JComponent.LEFT_ALIGNMENT
-            val label = JLabel(labelText)
-            label.alignmentX = JComponent.LEFT_ALIGNMENT
-            component.alignmentX = JComponent.LEFT_ALIGNMENT
-            add(label)
-            add(Box.createVerticalStrut(4))
-            add(component)
-        }
-    }
-
-    // Constrain the width of wide components so they don't span the whole settings page.
-    private fun restrictWidth(component: JComponent, preferredWidth: Int = 300, minWidth: Int = 160) {
-        val height = when {
-            component.preferredSize.height > 0 -> component.preferredSize.height
-            component.minimumSize.height > 0 -> component.minimumSize.height
-            else -> 24
-        }
-        val width = preferredWidth.coerceAtLeast(minWidth)
-        component.preferredSize = Dimension(width, height)
-        component.maximumSize = Dimension(width, height)
-        component.alignmentX = JComponent.LEFT_ALIGNMENT
-    }
-
     override fun createComponent(): JComponent {
         log.info("Creating application settings UI component")
 
@@ -75,7 +48,7 @@ class IntelliJApplicationSettingsConfigurable : SearchableConfigurable, Configur
         // Ignored words field with label and help icon
         gbc.gridy++
         ignoredWordsTextField = JTextField()
-        restrictWidth(ignoredWordsTextField!!)
+        SettingsUiSupport.restrictWidth(ignoredWordsTextField!!)
         val labelWithHelp = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             alignmentX = JComponent.LEFT_ALIGNMENT

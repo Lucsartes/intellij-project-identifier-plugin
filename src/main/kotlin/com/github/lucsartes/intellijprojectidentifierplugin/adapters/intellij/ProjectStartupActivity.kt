@@ -1,7 +1,7 @@
 package com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij
 
 import com.github.lucsartes.intellijprojectidentifierplugin.core.ApplicationSettings
-import com.github.lucsartes.intellijprojectidentifierplugin.core.PluginSettings
+import com.github.lucsartes.intellijprojectidentifierplugin.core.ProjectSettings
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -30,7 +30,7 @@ class ProjectStartupActivity : ProjectActivity {
         project.messageBus.connect(pipeline).subscribe(
             IntelliJSettingsService.TOPIC,
             object : IntelliJSettingsService.SettingsChangedListener {
-                override fun settingsChanged(newSettings: PluginSettings) {
+                override fun settingsChanged(newSettings: ProjectSettings) {
                     log.info("Project settings changed for '${project.name}'; refreshing")
                     branchWatch.sync()
                     pipeline.rerun()

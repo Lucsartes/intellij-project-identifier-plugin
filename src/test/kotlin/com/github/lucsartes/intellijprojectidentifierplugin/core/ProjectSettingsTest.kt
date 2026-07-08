@@ -3,11 +3,11 @@ package com.github.lucsartes.intellijprojectidentifierplugin.core
 import org.junit.Assert.*
 import org.junit.Test
 
-class PluginSettingsTest {
+class ProjectSettingsTest {
 
     @Test
     fun defaults_areNullAndDataClassCopyWorks() {
-        val defaults = PluginSettings()
+        val defaults = ProjectSettings()
         assertNull(defaults.identifierOverride)
         assertNull(defaults.fontFamily)
         assertNull(defaults.fontSizePx)
@@ -27,9 +27,9 @@ class PluginSettingsTest {
 
     @Test
     fun equality_worksCorrectly() {
-        val s1 = PluginSettings(identifierOverride = "ABC", fontFamily = "Arial", fontSizePx = 100, textColorArgb = 0xFFFFFF)
-        val s2 = PluginSettings(identifierOverride = "ABC", fontFamily = "Arial", fontSizePx = 100, textColorArgb = 0xFFFFFF)
-        val s3 = PluginSettings(identifierOverride = "XYZ", fontFamily = "Arial", fontSizePx = 100, textColorArgb = 0xFFFFFF)
+        val s1 = ProjectSettings(identifierOverride = "ABC", fontFamily = "Arial", fontSizePx = 100, textColorArgb = 0xFFFFFF)
+        val s2 = ProjectSettings(identifierOverride = "ABC", fontFamily = "Arial", fontSizePx = 100, textColorArgb = 0xFFFFFF)
+        val s3 = ProjectSettings(identifierOverride = "XYZ", fontFamily = "Arial", fontSizePx = 100, textColorArgb = 0xFFFFFF)
 
         assertEquals(s1, s2)
         assertNotEquals(s1, s3)
@@ -38,7 +38,7 @@ class PluginSettingsTest {
 
     @Test
     fun partialCopy_preservesUnchangedValues() {
-        val original = PluginSettings(identifierOverride = "TEST", fontFamily = "Courier", fontSizePx = 200, textColorArgb = 0xFF0000)
+        val original = ProjectSettings(identifierOverride = "TEST", fontFamily = "Courier", fontSizePx = 200, textColorArgb = 0xFF0000)
         val updated = original.copy(fontSizePx = 250)
 
         assertEquals("TEST", updated.identifierOverride)
@@ -50,7 +50,7 @@ class PluginSettingsTest {
     @Test
     fun canHandleNegativeColorValues() {
         // ARGB colors with alpha channel can be negative when interpreted as signed int
-        val settings = PluginSettings(textColorArgb = 0xFF000000.toInt()) // Black with full opacity
+        val settings = ProjectSettings(textColorArgb = 0xFF000000.toInt()) // Black with full opacity
         assertTrue(settings.textColorArgb!! < 0) // Negative when treated as signed int
     }
 }

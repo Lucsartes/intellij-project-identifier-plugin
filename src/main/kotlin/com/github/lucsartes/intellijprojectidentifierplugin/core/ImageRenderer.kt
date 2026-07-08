@@ -1,6 +1,5 @@
 package com.github.lucsartes.intellijprojectidentifierplugin.core
 
-import com.github.lucsartes.intellijprojectidentifierplugin.ports.ImageService
 import java.awt.AlphaComposite
 import java.awt.Color
 import java.awt.Font
@@ -8,38 +7,28 @@ import java.awt.GraphicsEnvironment
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
-import java.util.logging.Logger
 import javax.imageio.ImageIO
 
 /**
- * AWT-based implementation of ImageService that renders a transparent PNG with
- * the provided text tightly cropped to the top-left, plus a 50px margin on the
- * right and a 10 px margin on the bottom.
+ * AWT-based renderer that produces a transparent PNG with the given text tightly cropped to the
+ * top-left, plus a right and bottom margin.
  *
- * Notes:
- * - Uses only JDK AWT/Swing APIs, which work in headless mode.
- * - Image size adapts to the rendered text to avoid extra spacing.
+ * Uses only JDK AWT APIs, which work in headless mode, so it stays pure (no IntelliJ dependency)
+ * and unit-testable. The image size adapts to the rendered text to avoid extra spacing.
  */
-class ImageServiceImpl : ImageService {
+class ImageRenderer {
 
-    private val log: Logger = Logger.getLogger(ImageServiceImpl::class.java.name)
-
-
-    override fun renderPng(text: String, fontFamily: String?, fontSizePx: Int?, textColorArgb: Int?): ByteArray {
-        val inputPreview = if (text.length > CoreDefaults.LOG_PREVIEW_LENGTH) text.take(CoreDefaults.LOG_PREVIEW_LENGTH) + "…" else text
-        log.info("Rendering PNG for text (len=${text.length}): '$inputPreview'")
-
+    fun renderPng(text: String, fontFamily: String? = null, fontSizePx: Int? = null, textColorArgb: Int? = null): ByteArray {
         val textToDraw = text.ifBlank { "" }
 
-        // Determine effective font family and size
+        // Determine effective font size and family (font policy lives in FontSupport)
         val effectiveFontSize = (fontSizePx ?: CoreDefaults.DEFAULT_FONT_SIZE_PX).coerceAtLeast(CoreDefaults.MIN_FONT_SIZE_PX)
         val availableFamilies = try {
             GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()
         } catch (t: Throwable) {
             emptySet()
         }
-        val family = fontFamily?.takeIf { it.isNotBlank() && (availableFamilies.isEmpty() || availableFamilies.contains(it)) }
-            ?: "SansSerif"
+        val family = FontSupport.resolveFamily(fontFamily, availableFamilies)
         val baseFont = Font(family, Font.PLAIN, effectiveFontSize)
 
         // Use a temporary graphics context to measure text
@@ -75,16 +64,15 @@ class ImageServiceImpl : ImageService {
             g2d.composite = AlphaComposite.Clear
             g2d.fillRect(0, 0, width, height)
 
-            // Draw text fully opaque; opacity should be controlled by IDE background settings only
+            // Draw text fully opaque; on-screen opacity is controlled by IDE background settings only
             g2d.composite = AlphaComposite.SrcOver
             g2d.font = baseFont
             g2d.color = textColorArgb?.let { Color(it, true) } ?: Color.WHITE
 
-            // Position so that top touches image's top, left touches image's left
+            // Position so that the top touches the image's top and the left touches the image's left
             val x = 0
             val y = ascent // baseline so that top (y - ascent) == 0
             g2d.drawString(textToDraw, x, y)
-            log.info("Drew text at x=$x, y=$y; canvas=${width}x${height}; textWidth=$textWidth, ascent=$ascent, descent=$descent; fontFamily='$family', fontSize=$effectiveFontSize")
         } finally {
             g2d.dispose()
         }
@@ -95,8 +83,6 @@ class ImageServiceImpl : ImageService {
     private fun toPngBytes(image: BufferedImage): ByteArray {
         val baos = ByteArrayOutputStream()
         ImageIO.write(image, "png", baos)
-        val bytes = baos.toByteArray()
-        log.info("PNG rendered: ${bytes.size} bytes (size=${image.width}x${image.height})")
-        return bytes
+        return baos.toByteArray()
     }
 }
