@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+## [0.0.6] - 2026-07-08
+### Changed
+- Internal code refactoring and project documentation restructure — no user-facing changes.
+- Updated build tooling: Kotlin 2.2.21, IntelliJ Platform Gradle Plugin 2.10.5, Kover 0.9.3, Qodana 2025.2.2.
+
 ## [0.0.5] - 2026-07-07
 ### Added
 - Dynamic `${branch}` placeholder in the per-project identifier override: embed the current Git branch in the watermark (for example `XXX - ${branch}`). The watermark refreshes automatically when you switch branches - instantly via the bundled Git plugin, or shortly after by reading `.git/HEAD` when it is unavailable. `${branch}` becomes an empty string when the project has no branch (not a Git repository, or a detached HEAD). A help tooltip on the field documents the syntax (English and French).
@@ -38,7 +43,8 @@
 - Customizable identifier rules in Settings (Appearance & Behavior | Appearance)
 - Auto-refresh when settings change
 
-[unreleased]: https://github.com/Lucsartes/intellij-project-identifier-plugin/compare/v0.0.5...HEAD
+[unreleased]: https://github.com/Lucsartes/intellij-project-identifier-plugin/compare/v0.0.6...HEAD
+[0.0.6]: https://github.com/Lucsartes/intellij-project-identifier-plugin/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/Lucsartes/intellij-project-identifier-plugin/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/Lucsartes/intellij-project-identifier-plugin/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/Lucsartes/intellij-project-identifier-plugin/compare/v0.0.2...v0.0.3
