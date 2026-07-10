@@ -4,7 +4,7 @@
 > Living document — keep in sync with the code (see [`docs/README.md`](../README.md)).
 
 * **Status**: Accepted
-* **Last updated**: 2026-07-09 (originally decided 2025-09-18)
+* **Last updated**: 2026-07-10 (originally decided 2025-09-18)
 * **Authors**: Project maintainers
 
 ## 1. Context

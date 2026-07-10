@@ -6,7 +6,7 @@
 > (see [`docs/README.md`](../README.md)).
 
 * **Status**: Accepted
-* **Last updated**: 2026-07-09
+* **Last updated**: 2026-07-10
 * **Owners**: Project maintainers
 
 ## 1. Summary
@@ -105,7 +105,7 @@ whatever the user has set there.
 
 ## 7. Change history
 
-- 2026-07-09 — Added a live preview of the rendered identifier to the per-project settings page (updates as you
+- 2026-07-10 — Added a live preview of the rendered identifier to the per-project settings page (updates as you
   edit text/font/size/color; content only, opacity/position remain IDE-controlled).
 - 2025-10-08 — Settings reorganized into a nested parent (global) / child (per-project) structure; global
   ignored-words setting added.
