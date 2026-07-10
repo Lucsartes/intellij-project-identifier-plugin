@@ -61,7 +61,7 @@ Boundaries to respect when editing:
 ## Build, test, verify
 
 - Toolchain: JVM 21 (`org.gradle.java.home` is set globally to `/home/lfaviere/docs/apps/java-21`); Gradle 9;
-  IntelliJ Platform `IC 2024.3.6` (since-build 243). Git4Idea is a bundled plugin dependency, used *optionally*
+  IntelliJ Platform `IC 2025.2.6` (since-build 252). Git4Idea is a bundled plugin dependency, used *optionally*
   at runtime for event-driven branch detection.
 - Unit tests (fast, includes pure-core JUnit tests):
   `./gradlew compileKotlin compileTestKotlin test`

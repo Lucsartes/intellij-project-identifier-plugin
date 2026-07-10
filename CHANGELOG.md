@@ -3,6 +3,9 @@
 # intellij-project-identifier-plugin Changelog
 
 ## [Unreleased]
+### Changed
+- Raised the minimum supported IDE to 2025.2 (since-build 252): the plugin now targets IntelliJ Platform 2025.2.6. Users on older IDEs stay on the previous plugin release.
+- Updated build tooling: IntelliJ Platform Gradle Plugin 2.16.0, Gradle 9.5.0, Kover 0.9.8 (Kotlin stays at 2.2.21).
 
 ## [0.0.8] - 2026-07-13
 ### Fixed

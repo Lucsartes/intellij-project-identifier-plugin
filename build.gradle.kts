@@ -104,8 +104,8 @@ intellijPlatform {
 
     pluginVerification {
         ides {
-            // Verify against the configured development platform only to avoid unresolved EAP builds
-            ide(providers.gradleProperty("platformType"), providers.gradleProperty("platformVersion"))
+            // Verify against the configured development platform only to avoid unresolved EAP builds.
+            create(providers.gradleProperty("platformType"), providers.gradleProperty("platformVersion"))
         }
     }
 }
