@@ -3,8 +3,10 @@
 # intellij-project-identifier-plugin Changelog
 
 ## [Unreleased]
+
+## [0.0.7] - 2026-07-10
 ### Added
-- Live preview in the per-project settings page, shown beside the controls: the rendered identifier updates as you change the text, font, size or color, so you can compare options without leaving the dialog. It shows the text content at full opacity over the current editor background; on-screen opacity and position are still set on the IDE Background Image page.
+- Live preview in the per-project settings page, shown beside the controls: the rendered identifier updates as you change the text, font, size or color, so you can compare options without leaving the dialog. It shows the text content at full opacity over the current IDE background; on-screen opacity and position are still set on the IDE Background Image page.
 
 ## [0.0.6] - 2026-07-08
 ### Changed
@@ -45,7 +47,8 @@
 - Customizable identifier rules in Settings (Appearance & Behavior | Appearance)
 - Auto-refresh when settings change
 
-[unreleased]: https://github.com/Lucsartes/intellij-project-identifier-plugin/compare/v0.0.6...HEAD
+[unreleased]: https://github.com/Lucsartes/intellij-project-identifier-plugin/compare/v0.0.7...HEAD
+[0.0.7]: https://github.com/Lucsartes/intellij-project-identifier-plugin/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/Lucsartes/intellij-project-identifier-plugin/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/Lucsartes/intellij-project-identifier-plugin/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/Lucsartes/intellij-project-identifier-plugin/compare/v0.0.3...v0.0.4
