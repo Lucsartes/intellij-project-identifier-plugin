@@ -1,22 +1,38 @@
 package com.github.lucsartes.intellijprojectidentifierplugin.adapters.intellij
 
 import com.github.lucsartes.intellijprojectidentifierplugin.core.FontSupport
+import com.github.lucsartes.intellijprojectidentifierplugin.core.IdentifierGenerator
+import com.github.lucsartes.intellijprojectidentifierplugin.core.ImageRenderer
 import com.github.lucsartes.intellijprojectidentifierplugin.core.ProjectSettings
-import com.github.lucsartes.intellijprojectidentifierplugin.ports.ProjectSettingsPort
+import com.github.lucsartes.intellijprojectidentifierplugin.core.TemplateResolver
+import com.github.lucsartes.intellijprojectidentifierplugin.ports.ApplicationSettingsPort
 import com.github.lucsartes.intellijprojectidentifierplugin.ports.BackgroundImagePort
+import com.github.lucsartes.intellijprojectidentifierplugin.ports.BranchProvider
+import com.github.lucsartes.intellijprojectidentifierplugin.ports.ProjectSettingsPort
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.project.Project
 import com.intellij.ui.ColorPanel
+import com.intellij.util.ui.UIUtil
 import com.intellij.ide.HelpTooltip
 import com.intellij.icons.AllIcons
 import com.github.lucsartes.intellijprojectidentifierplugin.MyBundle
 import java.awt.Color
+import java.awt.Dimension
+import java.awt.Graphics
+import java.awt.Graphics2D
 import java.awt.GraphicsEnvironment
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
+import java.awt.RenderingHints
+import java.awt.image.BufferedImage
+import java.io.ByteArrayInputStream
+import javax.imageio.ImageIO
 import javax.swing.*
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 
 /**
  * Settings UI for the plugin, appears under Appearance & Behavior.
@@ -32,6 +48,19 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
     private lateinit var fontCombo: JComboBox<String>
     private lateinit var sizeCombo: JComboBox<String>
     private lateinit var colorPanel: ColorPanel
+    private lateinit var previewPanel: PreviewPanel
+
+    // Pure-core collaborators reused to render the live preview exactly as the watermark pipeline would.
+    private val identifierGenerator = IdentifierGenerator()
+    private val imageRenderer = ImageRenderer()
+    private val templateResolver = TemplateResolver()
+
+    // The branch is resolved once per dialog session (it rarely changes while Settings is open).
+    private var cachedBranch: String? = null
+    private var branchResolved = false
+
+    // Guards the preview from re-rendering repeatedly while reset() bulk-updates the controls.
+    private var suppressPreview = false
 
     // Cached defaults used for rendering labels like "(Default)"
     private var defaultFontFamily: String? = null
@@ -46,7 +75,8 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
     override fun createComponent(): JComponent {
         if (panel == null) {
             log.info("Creating Project Identifier settings UI panel")
-            panel = JPanel(GridBagLayout()).apply {
+            // Left column: the narrow content controls plus the reset action (they don't need the full width).
+            val controlsColumn = JPanel(GridBagLayout()).apply {
                 val gbc = GridBagConstraints().apply {
                     gridx = 0
                     gridy = 0
@@ -197,12 +227,67 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                 gbc.fill = oldFill
                 gbc.weightx = oldWeightX
                 gbc.anchor = oldAnchor
+            }
 
-                // Hint about position/opacity settings location
+            // Live preview, placed to the RIGHT of the controls. Content only: full opacity, over the current
+            // IDE background color; on-screen opacity/position stay IDE-controlled. Lets the user compare
+            // options without applying (and Cancel to discard).
+            previewPanel = PreviewPanel()
+            val previewSide = JPanel().apply {
+                layout = BoxLayout(this, BoxLayout.Y_AXIS)
+                val labelRow = JPanel().apply {
+                    layout = BoxLayout(this, BoxLayout.X_AXIS)
+                    alignmentX = JComponent.LEFT_ALIGNMENT
+                    add(JLabel(MyBundle.message("settings.preview.label")))
+                    add(Box.createHorizontalStrut(6))
+                    val helpIcon = JLabel(AllIcons.General.ContextHelp)
+                    HelpTooltip()
+                        .setTitle(MyBundle.message("settings.preview.tooltip.title"))
+                        .setDescription(MyBundle.message("settings.preview.tooltip.description"))
+                        .installOn(helpIcon)
+                    add(helpIcon)
+                }
+                add(labelRow)
+                add(Box.createVerticalStrut(4))
+                previewPanel.alignmentX = JComponent.LEFT_ALIGNMENT
+                add(previewPanel)
+            }
+
+            // Top row: controls on the left, preview immediately to their right; a filler eats the rest of the width.
+            val topRow = JPanel(GridBagLayout()).apply {
+                val c = GridBagConstraints().apply {
+                    gridx = 0
+                    gridy = 0
+                    anchor = GridBagConstraints.NORTHWEST
+                    fill = GridBagConstraints.NONE
+                    weightx = 0.0
+                }
+                add(controlsColumn, c)
+                c.gridx = 1
+                c.insets = Insets(6, 18, 6, 6)
+                add(previewSide, c)
+                c.gridx = 2
+                c.insets = Insets(0, 0, 0, 0)
+                c.weightx = 1.0
+                c.fill = GridBagConstraints.HORIZONTAL
+                add(Box.createHorizontalGlue(), c)
+            }
+
+            // Assemble: the two-column top row, then the full-width hint, then a vertical spacer.
+            panel = JPanel(GridBagLayout()).apply {
+                val gbc = GridBagConstraints().apply {
+                    gridx = 0
+                    gridy = 0
+                    weightx = 1.0
+                    fill = GridBagConstraints.HORIZONTAL
+                    anchor = GridBagConstraints.NORTHWEST
+                    insets = Insets(6, 6, 6, 6)
+                }
+                add(topRow, gbc)
+
+                // Hint about position/opacity settings location (full width, below the controls)
                 gbc.gridy++
-                // Add extra top spacing to visually separate this hint from the settings above
-                val oldInsets2 = gbc.insets
-                gbc.insets = Insets(oldInsets2.top + 12, oldInsets2.left, oldInsets2.bottom, oldInsets2.right)
+                gbc.insets = Insets(18, 6, 6, 6)
                 val hintLabel = JLabel(MyBundle.message("settings.hint.label"))
                 val hintPanel = JPanel().apply {
                     layout = BoxLayout(this, BoxLayout.X_AXIS)
@@ -217,14 +302,14 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                     add(helpIcon)
                 }
                 add(hintPanel, gbc)
-                gbc.insets = oldInsets2
-
 
                 gbc.gridy++
+                gbc.insets = Insets(6, 6, 6, 6)
                 gbc.weighty = 1.0
                 add(Box.createVerticalGlue(), gbc)
             }
 
+            wirePreviewListeners()
             // Initialize values
             reset()
         }
@@ -269,6 +354,7 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
     override fun reset() {
         val s = service.load()
         log.info("Resetting settings UI from service: identifier=${s.identifierOverride}, fontFamily=${s.fontFamily}, fontSizePx=${s.fontSizePx}, textColorArgb=${s.textColorArgb}")
+        suppressPreview = true
         identifierField.text = s.identifierOverride ?: ""
         colorPanel.selectedColor = (s.textColorArgb?.let { Color(it, true) } ?: Color.WHITE)
         // Font selection
@@ -328,10 +414,110 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                 }
             }
         }
+        suppressPreview = false
+        updatePreview()
     }
 
     override fun disposeUIResources() {
         log.info("Disposing settings UI resources")
         panel = null
+        branchResolved = false
+        cachedBranch = null
+    }
+
+    private fun wirePreviewListeners() {
+        identifierField.document.addDocumentListener(object : DocumentListener {
+            override fun insertUpdate(e: DocumentEvent) = updatePreview()
+            override fun removeUpdate(e: DocumentEvent) = updatePreview()
+            override fun changedUpdate(e: DocumentEvent) = updatePreview()
+        })
+        fontCombo.addActionListener { updatePreview() }
+        sizeCombo.addActionListener { updatePreview() }
+        colorPanel.addActionListener { updatePreview() }
+    }
+
+    /** Re-renders the preview from the current UI control values, mirroring what the watermark pipeline would draw. */
+    private fun updatePreview() {
+        if (suppressPreview || !this::previewPanel.isInitialized) return
+        val image = runCatching {
+            val selectedFont = fontCombo.selectedItem as? String
+            val uiFont = selectedFont?.let { if (defaultFontFamily != null && it == defaultFontFamily) null else it }
+            val uiSizePx = (sizeCombo.selectedItem as? String)?.toIntOrNull()?.let { if (it == defaultFontSizePx) null else it }
+            val uiColorArgb = colorPanel.selectedColor?.rgb?.let { if (it == Color.WHITE.rgb) null else it }
+            val text = resolvePreviewText()
+            if (text.isBlank()) null else ImageIO.read(ByteArrayInputStream(imageRenderer.renderPng(text, uiFont, uiSizePx, uiColorArgb)))
+        }.onFailure { log.debug("Failed to render settings preview", it) }.getOrNull()
+        previewPanel.image = image
+    }
+
+    /** Resolves the effective watermark text like the pipeline does: override or derived name, with ${branch} filled in. */
+    private fun resolvePreviewText(): String {
+        val base = identifierField.text.ifBlank { null } ?: identifierGenerator.generate(project.name, ignoredWords())
+        val branch = if (templateResolver.usesPlaceholder(base, TemplateResolver.BRANCH)) previewBranch() else null
+        return templateResolver.resolve(base, mapOf(TemplateResolver.BRANCH to branch))
+    }
+
+    private fun ignoredWords(): Set<String> =
+        runCatching {
+            ApplicationManager.getApplication().getService(ApplicationSettingsPort::class.java).load().ignoredWords.toSet()
+        }.getOrDefault(emptySet())
+
+    private fun previewBranch(): String? {
+        if (!branchResolved) {
+            cachedBranch = runCatching { project.getService(BranchProvider::class.java).currentBranch() }.getOrNull()
+            branchResolved = true
+        }
+        return cachedBranch
+    }
+
+    /** The IDE background color the watermark sits on, so white-on-white (or dark-on-dark) never hides the text. */
+    private fun previewBackgroundColor(): Color =
+        runCatching { UIUtil.getPanelBackground() }.getOrNull()
+            ?: Color(0x2B, 0x2B, 0x2B)
+
+    /**
+     * Small fixed-size panel that paints the rendered watermark image scaled to fit, on top of the current editor
+     * background color — so the preview reflects how the chosen text/font/size/color will actually read. Content only:
+     * on-screen opacity and position stay controlled by the IDE Background Image page.
+     */
+    private inner class PreviewPanel : JPanel() {
+        var image: BufferedImage? = null
+            set(value) {
+                field = value
+                repaint()
+            }
+
+        init {
+            val size = Dimension(PREVIEW_WIDTH_PX, PREVIEW_HEIGHT_PX)
+            preferredSize = size
+            minimumSize = size
+            maximumSize = size
+            alignmentX = JComponent.LEFT_ALIGNMENT
+            border = BorderFactory.createLineBorder(Color.GRAY)
+            isOpaque = true
+        }
+
+        override fun paintComponent(g: Graphics) {
+            super.paintComponent(g)
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.color = previewBackgroundColor()
+                g2.fillRect(0, 0, width, height)
+                val img = image ?: return
+                if (img.width <= 0 || img.height <= 0) return
+                val scale = minOf(width.toDouble() / img.width, height.toDouble() / img.height)
+                val w = (img.width * scale).toInt().coerceAtLeast(1)
+                val h = (img.height * scale).toInt().coerceAtLeast(1)
+                g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+                g2.drawImage(img, (width - w) / 2, (height - h) / 2, w, h, null)
+            } finally {
+                g2.dispose()
+            }
+        }
+    }
+
+    companion object {
+        private const val PREVIEW_WIDTH_PX = 300
+        private const val PREVIEW_HEIGHT_PX = 100
     }
 }

@@ -6,7 +6,7 @@
 > (see [`docs/README.md`](../README.md)).
 
 * **Status**: Accepted
-* **Last updated**: 2026-07-08
+* **Last updated**: 2026-07-09
 * **Owners**: Project maintainers
 
 ## 1. Summary
@@ -45,6 +45,13 @@ Stored with the project, so they travel with it and differ per project:
 | **Font family**      | Typeface used to render the text; a curated dropdown of common fonts. Unavailable fonts fall back gracefully. | JetBrains Mono if available, else a sans-serif fallback |
 | **Text size (px)**   | Font size, chosen from a preset list.                                        | 144 px  |
 | **Text color**       | Color of the rendered text.                                                  | White   |
+
+The child page shows a **live preview** of the rendered identifier, beside the controls, that updates
+immediately as you edit the text, font, size or color, so you can compare options without leaving the dialog.
+The preview shows the text *content* (at full opacity, over the current IDE background color); on-screen
+opacity and position stay governed by the IDE Background Image page. The real editor background refreshes when
+you apply or close the dialog. (Using the preview to experiment means nothing is committed until you apply, so
+Cancel discards it.)
 
 The child page also has a **Reset** action that returns these per-project settings to their defaults and
 restores the IDE background display options (opacity/style/anchor) to the plugin's defaults, and a permanent
@@ -98,6 +105,8 @@ whatever the user has set there.
 
 ## 7. Change history
 
+- 2026-07-09 — Added a live preview of the rendered identifier to the per-project settings page (updates as you
+  edit text/font/size/color; content only, opacity/position remain IDE-controlled).
 - 2025-10-08 — Settings reorganized into a nested parent (global) / child (per-project) structure; global
   ignored-words setting added.
 - 2025-10-01 — Initial per-project settings under *Appearance & Behavior | Appearance*.

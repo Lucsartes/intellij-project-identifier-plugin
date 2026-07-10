@@ -4,7 +4,7 @@
 > Living document — keep in sync with the code (see [`docs/README.md`](../README.md)).
 
 * **Status**: Accepted
-* **Last updated**: 2026-07-08 (originally decided 2025-09-18)
+* **Last updated**: 2026-07-09 (originally decided 2025-09-18)
 * **Authors**: Project maintainers
 
 ## 1. Context
@@ -57,6 +57,16 @@ Adopt **Option B** for the boundary, and a **nested configurable** structure for
   application service only publishes when the state actually changed). `ProjectStartupActivity` subscribes to
   both topics — tied to the pipeline service's lifetime — and calls `WatermarkPipelineService.rerun()` (and
   `BranchWatchService.sync()` for project changes). This is what makes the watermark refresh automatically.
+* **Live preview.** The per-project page renders a live preview of the identifier, laid out to the **right** of
+  the controls (they don't need the full width), by reusing the pure-`core` `IdentifierGenerator`,
+  `TemplateResolver` and `ImageRenderer` (the same collaborators the pipeline uses), decoding the PNG and
+  painting it scaled-to-fit over the current IDE background color; listeners on the text/font/size/color
+  controls refresh it as you edit. It renders *content* only (full opacity) since opacity/position stay
+  IDE-owned. Rationale: it gives immediate visual feedback while editing without writing a file, committing, or
+  touching the IDE background — so options can be compared and then kept (Apply/OK, which do refresh the real
+  editor background) or discarded (Cancel). It is a self-contained Swing component, independent of the watermark
+  pipeline (no shared state), so it never affects the applied watermark. Branch resolution for `${branch}`
+  previews is cached per dialog session to keep the render cheap.
 * **Reset.** The per-project page's Reset restores `ProjectSettings()` defaults and calls
   `BackgroundImagePort.resetBackgroundSettingsToDefaults()` so the IDE display options return to the plugin's
   defaults too.
@@ -83,7 +93,7 @@ Adopt **Option B** for the boundary, and a **nested configurable** structure for
 - `src/main/kotlin/.../adapters/intellij/IntelliJApplicationSettingsService.kt` — application persistence
   (`projectIdentifier.xml`) + `TOPIC`.
 - `src/main/kotlin/.../adapters/intellij/IntelliJSettingsConfigurable.kt` — per-project UI (override + help
-  tooltip, curated font list, size presets, color, reset, hint).
+  tooltip, curated font list, size presets, color, live preview, reset, hint).
 - `src/main/kotlin/.../adapters/intellij/IntelliJApplicationSettingsConfigurable.kt` — global UI (ignored
   words).
 - `src/main/kotlin/.../adapters/intellij/SettingsUiSupport.kt` — shared Swing helpers (`labeled`,

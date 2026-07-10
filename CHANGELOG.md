@@ -3,6 +3,8 @@
 # intellij-project-identifier-plugin Changelog
 
 ## [Unreleased]
+### Added
+- Live preview in the per-project settings page, shown beside the controls: the rendered identifier updates as you change the text, font, size or color, so you can compare options without leaving the dialog. It shows the text content at full opacity over the current editor background; on-screen opacity and position are still set on the IDE Background Image page.
 
 ## [0.0.6] - 2026-07-08
 ### Changed
