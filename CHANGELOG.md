@@ -3,6 +3,8 @@
 # intellij-project-identifier-plugin Changelog
 
 ## [Unreleased]
+
+## [0.0.8] - 2026-07-13
 ### Fixed
 - Clicking **Apply** in the settings now updates the editor and empty-frame background watermark immediately, with the settings window still open. Previously the change often appeared only after clicking OK or Cancel.
 
