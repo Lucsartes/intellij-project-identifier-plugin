@@ -49,9 +49,9 @@ Stored with the project, so they travel with it and differ per project:
 The child page shows a **live preview** of the rendered identifier, beside the controls, that updates
 immediately as you edit the text, font, size or color, so you can compare options without leaving the dialog.
 The preview shows the text *content* (at full opacity, over the current IDE background color); on-screen
-opacity and position stay governed by the IDE Background Image page. The real editor background refreshes when
-you apply or close the dialog. (Using the preview to experiment means nothing is committed until you apply, so
-Cancel discards it.)
+opacity and position stay governed by the IDE Background Image page. The real editor background refreshes
+**immediately when you click Apply** — the settings window stays open — as well as on OK. (Using the preview to
+experiment means nothing is committed until you apply, so Cancel discards it.)
 
 The child page also has a **Reset** action that returns these per-project settings to their defaults and
 restores the IDE background display options (opacity/style/anchor) to the plugin's defaults, and a permanent
@@ -105,6 +105,9 @@ whatever the user has set there.
 
 ## 7. Change history
 
+- 2026-07-13 — Clicking **Apply** now refreshes the editor/frame background immediately, with the settings
+  window still open (previously it often took effect only after OK/Cancel — an IDE image-cache/modality timing
+  issue; see [ADR-0001](../adrs/adr-0001-dynamic-image-generation.md)).
 - 2026-07-10 — Added a live preview of the rendered identifier to the per-project settings page (updates as you
   edit text/font/size/color; content only, opacity/position remain IDE-controlled).
 - 2025-10-08 — Settings reorganized into a nested parent (global) / child (per-project) structure; global

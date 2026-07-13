@@ -69,6 +69,20 @@ the IDE's background-image opacity (see [ADR-0003](adr-0003-settings-implementat
 > the plugin still loads and falls back to reading `.git/HEAD`. The plugin's only *hard* dependency remains
 > `com.intellij.modules.platform`.
 
+> **Amendment 2026-07-13 — applying live under the modal Settings dialog.** Setting the background property to a
+> *new* image path repaints the editor only *after* the modal Settings dialog closes: the platform loads the new
+> file on a pooled thread and swaps it via a non-modal `invokeLater`, which is held back while the dialog is open
+> (confirmed by decompiling the platform's `PainterHelper$MyImagePainter` — the relevant internals are identical
+> on IC 2024.3.6 and 2025.2.6). So clicking **Apply** (dialog stays open) would only refresh the watermark when a
+> cache race happened to fall the right way. To make Apply
+> deterministic, the adapter reflectively pre-populates the platform's internal painter image cache
+> (`PainterHelper$MyImagePainter.ourImageCache`) with the freshly rendered image *before* writing the property, so
+> the painter's next paint takes its **synchronous** cache-hit branch and applies the watermark immediately. This
+> deepens the internal-API exposure, so — consistent with this ADR — it stays strictly inside the adapter and is
+> entirely best-effort: `WallpaperCacheReflection.prime` returns `false` (never throws) and the code falls back to
+> the plain property write (still applied on OK/Cancel) if the internals differ on some IDE build. A guard test
+> (`WallpaperCacheReflectionTest`) fails loudly if the reflected class/field/record shape changes on an upgrade.
+
 ## 6. Reflected in code
 
 - `src/main/kotlin/.../core/ImageRenderer.kt` — AWT rendering of the transparent PNG (opaque text, antialiased,
@@ -79,6 +93,10 @@ the IDE's background-image opacity (see [ADR-0003](adr-0003-settings-implementat
 - `src/main/kotlin/.../ports/BackgroundImagePort.kt` — the port isolating the background-image concern.
 - `src/main/kotlin/.../adapters/intellij/IntelliJBackgroundImageAdapter.kt` — the only code touching the
   internal `ide.background.*` properties (`IdeBackgroundUtil.EDITOR_PROP` / `FRAME_PROP`); fails gracefully.
+- `src/main/kotlin/.../adapters/intellij/WallpaperCacheReflection.kt` — best-effort reflective priming of the
+  IDE's internal painter image cache so **Apply** refreshes the watermark live under the modal Settings dialog;
+  returns `false` and never throws on unknown internals. Guarded by
+  `src/test/kotlin/.../adapters/intellij/WallpaperCacheReflectionTest.kt`.
 - `src/main/kotlin/.../adapters/intellij/BackgroundPropertiesConstants.kt` — the property keys and display
   defaults (opacity 15, style `plain`, anchor `bottom_right`).
 - `src/main/kotlin/.../core/WatermarkStore.kt` — on-disk write + cleanup.

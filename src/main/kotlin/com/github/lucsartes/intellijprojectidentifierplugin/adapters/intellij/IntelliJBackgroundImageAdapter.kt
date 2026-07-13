@@ -5,7 +5,9 @@ import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.impl.IdeBackgroundUtil
+import java.awt.Image
 import java.nio.file.Path
+import javax.imageio.ImageIO
 
 /**
  * IntelliJ-specific adapter that applies editor background image settings by writing
@@ -14,6 +16,11 @@ import java.nio.file.Path
 class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundImagePort {
 
     private val log = Logger.getInstance(IntelliJBackgroundImageAdapter::class.java)
+
+    // The IDE background-image cache holds image values weakly; keep a strong reference to the most
+    // recently primed image so ours survives until the painter reads it on the next paint.
+    @Volatile
+    private var lastPrimedImage: Image? = null
 
     private data class PropsResult(val props: PropertiesComponent, val projectScoped: Boolean)
 
@@ -52,6 +59,12 @@ class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundI
             }
 
             val newProp = "$absolutePath,$effectiveOpacity,$effectiveStyle,$effectiveAnchor"
+
+            // Seed the IDE background-image painter cache with the freshly rendered image so the
+            // change applies live even while the (modal) Settings dialog is open. Otherwise the
+            // platform loads the new file asynchronously and defers the swap (a non-modal
+            // invokeLater) until the dialog closes, so Apply would only take effect on OK/Cancel.
+            primeBackgroundImageCache(absolutePath, imagePath)
 
             // Set combined property using IdeBackgroundUtil.EDITOR_PROP
             props.setValue(IdeBackgroundUtil.EDITOR_PROP, newProp)
@@ -111,6 +124,23 @@ class IntelliJBackgroundImageAdapter(private val project: Project) : BackgroundI
             IdeBackgroundUtil.repaintAllWindows()
         } catch (t: Throwable) {
             log.warn("Failed to reset background image properties to defaults", t)
+        }
+    }
+
+    /**
+     * Best-effort optimization (see ADR-0001): primes the IDE's internal background-image painter
+     * cache with [imagePath]'s pixels so the next repaint applies the watermark synchronously, even
+     * under the modal Settings dialog. On any failure the watermark still applies once the dialog
+     * closes, so a broken IDE internal can never keep the watermark from working.
+     */
+    private fun primeBackgroundImageCache(absolutePath: String, imagePath: Path) {
+        runCatching {
+            val image = ImageIO.read(imagePath.toFile())
+            if (image != null && WallpaperCacheReflection.prime(absolutePath, image)) {
+                lastPrimedImage = image
+            }
+        }.onFailure { t ->
+            log.debug("Could not prime background-image cache; watermark will apply on OK/Cancel", t)
         }
     }
 }
