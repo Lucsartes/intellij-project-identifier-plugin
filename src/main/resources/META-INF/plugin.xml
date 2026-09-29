@@ -15,8 +15,6 @@
          reading .git/HEAD, so the ${branch} placeholder degrades gracefully. -->
     <depends optional="true" config-file="git-integration.xml">Git4Idea</depends>
 
-	<resource-bundle>messages.MyBundle</resource-bundle>
-
 	<extensions defaultExtensionNs="com.intellij">
         <!-- Project-level service that persists settings and implements ProjectSettingsPort -->
         <projectService

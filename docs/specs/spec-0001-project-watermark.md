@@ -1,92 +1,74 @@
 # SPEC-0001: Project watermark
 
-> Product/behavioral spec. Describes *what* the plugin does for the user. The technical realization lives in
-> the ADRs linked in §6. Keep this document in sync with the code (see [`docs/README.md`](../README.md)).
-
 * **Status**: Accepted
-* **Last updated**: 2026-07-08
-* **Owners**: Project maintainers
+* **Last updated**: 2026-09-24
 
 ## 1. Summary
 
-Project Identifier helps a developer who keeps several IDE windows open tell them apart at a glance. When a
-project is opened, the plugin draws a subtle, low-opacity **text watermark** onto the editor background (and
-the empty-frame background shown when no file is open). The watermark text is derived from the project — by
-default a short acronym of its name — so each window carries a distinct visual marker that is visible even in a
-task switcher (`Alt+Tab`, the Windows key, Mission Control, etc.).
+Project Identifier helps a developer who keeps several IDE windows open tell them apart at a glance. For each
+open project, the plugin shows a large, faint **text watermark** behind the editor, and behind the empty window
+area shown when no file is open. The text is derived from the project, by default a short acronym of its name.
+Each window therefore carries a distinct marker, still readable in a task switcher (`Alt+Tab`, the Windows key,
+Mission Control, …).
 
-## 2. Context & motivation
+## 2. Motivation
 
-Developers who juggle many projects (microservices, multiple checkouts of the same repo, client projects) lose
-time working out *which* window is which — the title bar text is easy to miss when switching quickly. A large,
-faint marker sitting behind the code is glanceable and unobtrusive: readable during a task switch, invisible
-enough not to distract while coding.
+Developers who juggle many projects (microservices, several checkouts of the same repository, client projects)
+lose time working out *which* window is which, because the title bar is easy to miss when switching quickly. A
+large, faint marker behind the code is readable at a glance during a task switch, and faint enough not to
+distract while coding.
 
-A user could already do this by hand — generate an image with some text and set it as the IDE background — but
-that is a fiddly, multi-step, per-project chore. The plugin's value is automating it.
+Users could already do this by hand: make an image with some text and set it as the IDE background. But that
+is a fiddly chore to repeat for every project and redo on every change. The plugin automates it.
 
 ## 3. Behavior
 
-**When the watermark is (re)generated.** The plugin recomputes and reapplies the watermark:
-- when a project is opened;
-- when the plugin's project-level or global settings change (see [SPEC-0003](spec-0003-settings-and-scopes.md));
-- when the current Git branch changes, if the identifier uses the `${branch}` placeholder (see [SPEC-0004](spec-0004-branch-placeholder.md)).
+### 3.1 When the watermark is (re)generated
 
-**What the user sees.**
-- A transparent image containing the identifier text is applied as the background of both the editor and the
-  empty frame, scoped to the current project only. Other open projects are unaffected.
-- The text is rendered opaque inside the image; the *on-screen* faintness comes from the IDE's background-image
-  opacity, which defaults to a low value the first time the plugin applies an image but remains fully under the
-  user's control thereafter (see §4 and [SPEC-0003](spec-0003-settings-and-scopes.md)).
-- The text content, font, size, and color follow the rules in [SPEC-0002](spec-0002-identifier-derivation.md)
-  and the user's settings.
+The plugin recomputes and reapplies a project's watermark automatically:
 
-**Persistence & isolation.**
-- The generated image is stored on disk in a per-project location. Regenerating a project's watermark cleans up
-  that project's own previous image; it never deletes another project's image, even when two project names share
-  a prefix (e.g. `shop` and `shop-api`).
-- Because the image is a normal background image, the user is free to change or clear it via the IDE's own
-  Background Image settings at any time.
+- when the project is opened;
+- when the plugin's per-project or global settings are applied (see [SPEC-0003](spec-0003-settings-and-scopes.md));
+- when the current Git branch changes, if the identifier uses the `${branch}` placeholder (see
+  [SPEC-0004](spec-0004-branch-placeholder.md)).
 
-**Graceful behavior.**
-- If the identifier resolves to empty text (e.g. a blank project name), the plugin produces a minimal
-  transparent image rather than failing.
-- Any failure while generating or applying the watermark is contained: it is logged and the IDE keeps running
-  normally. The plugin never blocks or crashes the IDE because of a watermark problem.
+No restart or manual refresh is ever needed.
 
-## 4. Non-goals / out of scope
+### 3.2 What the user sees
 
-- **Watermark position, opacity, scaling, and tiling are not plugin settings.** They are owned by the IDE's
-  *Appearance & Behavior | Appearance | Background Image* page. The plugin only decides the *content* of the
-  image; the IDE decides how it is displayed. This boundary is specified in
-  [SPEC-0003 §Non-goals](spec-0003-settings-and-scopes.md) and realized in
-  [ADR-0003](../adrs/adr-0003-settings-implementation.md).
-- The plugin does not draw directly on the editor canvas or overlay UI components; it only produces a
-  background image (the *why* is in [ADR-0001](../adrs/adr-0001-dynamic-image-generation.md)).
+- The identifier text appears as the background of the editor and of the empty window area, **for this project
+  only**. Other open projects keep their own watermark.
+- The text content, font, size and color follow [SPEC-0002](spec-0002-identifier-derivation.md) and the
+  user's settings.
+- How the watermark is *displayed* (opacity, position, scaling) is controlled by the IDE's own Background Image
+  settings. The first time the plugin applies a watermark to a project, it uses a low opacity and places the
+  text in the bottom-right corner, unscaled. After that, it keeps whatever the user sets on the IDE's
+  Background Image page.
+- The watermark is an ordinary IDE background image, so the user can change or clear it on the IDE's
+  Background Image page. The plugin sets it again at the next regeneration (see §3.1), for example when the
+  project is reopened.
 
-## 5. Reflected in code
+### 3.3 Edge cases
 
-- `src/main/kotlin/.../adapters/intellij/ProjectStartupActivity.kt` — runs on project open; wires the refresh
-  triggers (startup, settings changes, branch changes).
-- `src/main/kotlin/.../adapters/intellij/WatermarkPipelineService.kt` — the derive → render → persist → apply
-  pipeline.
-- `src/main/kotlin/.../core/ImageRenderer.kt` — renders the transparent PNG with opaque text.
-- `src/main/kotlin/.../core/WatermarkStore.kt` — per-project on-disk storage and cleanup isolation.
-- `src/main/kotlin/.../adapters/intellij/IntelliJBackgroundImageAdapter.kt` — applies the image to the editor
-  and empty-frame backgrounds.
-- Tests: `src/test/kotlin/.../core/ImageRendererTest.kt`,
-  `.../core/ImageRendererEdgeCasesTest.kt`, `.../core/WatermarkStoreTest.kt`,
-  `.../adapters/intellij/ServiceWiringIntegrationTest.kt`.
+- If the identifier text is empty (for example a blank project name), no watermark text is shown, and nothing
+  fails.
+- A problem while generating or applying the watermark never blocks, slows down or crashes the IDE. The
+  watermark is simply not updated, and the problem is recorded in the IDE log.
 
-## 6. Related decisions
+## 4. Out of scope
+
+- **No display controls in the plugin.** Opacity, position, scaling and tiling belong to the IDE's
+  *Appearance & Behavior | Appearance | Background Image* page. The plugin decides only *what* the image
+  shows (see [SPEC-0003 §3.3](spec-0003-settings-and-scopes.md)).
+- **No overlays.** The plugin never draws over the code or adds UI components. The marker is only ever a
+  background.
+- **No on/off switch.** To remove the watermark permanently, disable the plugin.
+
+## 5. Related
 
 - **Realized by**: [ADR-0001 — Dynamic image generation](../adrs/adr-0001-dynamic-image-generation.md),
+  [ADR-0006 — Serialized refresh pipeline](../adrs/adr-0006-serialized-refresh-pipeline.md),
   [ADR-0002 — Hexagonal architecture](../adrs/adr-0002-hexagonal-architecture.md).
 - **See also**: [SPEC-0002 — Identifier derivation](spec-0002-identifier-derivation.md),
   [SPEC-0003 — Settings & scopes](spec-0003-settings-and-scopes.md),
   [SPEC-0004 — Branch placeholder](spec-0004-branch-placeholder.md).
-
-## 7. Change history
-
-- 2025-10-09 — Watermark now also shown on the empty frame (not only the editor).
-- 2025-10-01 — Initial behavior: automatic watermark derived from the project name.

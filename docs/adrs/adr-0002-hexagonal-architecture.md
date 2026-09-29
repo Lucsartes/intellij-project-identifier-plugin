@@ -1,92 +1,76 @@
-# ADR-0002: Hexagonal architecture
-
-> Technical decision. It underpins essentially every spec by keeping product logic testable and IDE-independent.
-> Living document — keep in sync with the code (see [`docs/README.md`](../README.md)).
+# ADR-0002: Hexagonal architecture (core / ports / adapters)
 
 * **Status**: Accepted
-* **Last updated**: 2026-07-08 (originally decided 2025-09-09)
-* **Authors**: Project maintainers
+* **Decided**: 2025-09-09
+* **Last updated**: 2026-09-24
 
 ## 1. Context
 
-The plugin's core behavior (identifier derivation, template resolution, image rendering) must be reliable and
-testable, while the parts that touch the IntelliJ Platform SDK — especially the internal background-image API
-from [ADR-0001](adr-0001-dynamic-image-generation.md) — are the least stable and hardest to test. We need a
-structure that keeps the volatile IDE surface small and the valuable logic pure.
+The valuable logic of the plugin (identifier derivation, placeholder resolution, image rendering) must be
+reliable and easy to test. The parts that touch the IntelliJ Platform SDK are the least stable and the hardest
+to test, especially the internal background-image API from [ADR-0001](adr-0001-dynamic-image-generation.md). We
+need a structure that keeps that volatile surface small and the logic pure.
 
 ## 2. Decision drivers
 
-* **Maintainability** — decouple domain logic from IDE APIs so each can change independently.
-* **Testability** — exercise core logic in fast JVM unit tests, with no running IDE.
-* **API-stability containment** — confine unstable IDE/VCS APIs to a thin, swappable layer.
-* **Practicality** — stay compatible with the official IntelliJ Platform Plugin Template's build and layout.
+* **Testability** — core logic runs in fast JVM unit tests, with no IDE.
+* **API-stability containment** — unstable IDE and VCS APIs stay in a thin, replaceable layer.
+* **Maintainability** — domain logic and IDE integration can change independently.
+* **Practicality** — stay close to the official IntelliJ Platform Plugin Template's build and layout.
 
 ## 3. Considered options
 
-* **Layered hexagonal (core / ports / adapters).** Pure domain in the center, interfaces (ports) describing
-  what the domain needs, adapters implementing those ports against the SDK. Pros: clear boundaries, testable
-  core, isolated instability. Cons: some upfront boilerplate and indirection.
-* **Flat plugin code (SDK calls throughout).** Pros: least boilerplate initially. Cons: business logic tangled
-  with IDE types, hard to unit-test, and every IDE-API break ripples widely.
+* **A — Hexagonal: core / ports / adapters.** Pure logic in the center, interfaces for what it needs from the
+  outside, adapters implementing them on the SDK. Pros: clear boundaries, testable core, instability isolated.
+  Cons: some extra interfaces and wiring.
+* **B — Flat plugin code, with SDK calls wherever needed.** Pros: least code at first. Cons: logic tangled with
+  IDE types, hard to unit-test, and every IDE-API break spreads widely.
 
 ## 4. Decision
 
-Adopt a **hexagonal architecture** with three packages under
-`com.github.lucsartes.intellijprojectidentifierplugin`:
+Adopt **option A**, with three packages under `com.github.lucsartes.intellijprojectidentifierplugin`:
 
-* **`core`** — pure Kotlin domain and use cases; **no IntelliJ (or VCS) imports**. Contains the settings models
-  (`ProjectSettings`, `ApplicationSettings`), identifier derivation (`IdentifierGenerator`), image rendering
-  (`ImageRenderer`), the font-resolution policy (`FontSupport`), placeholder resolution (`TemplateResolver`),
-  branch-change detection (`BranchChangeDetector`), `.git/HEAD` parsing (`GitHeadParser`), and on-disk storage
-  (`WatermarkStore`).
-* **`ports`** — interfaces describing what the core needs from the outside world: `ProjectSettingsPort`,
-  `ApplicationSettingsPort`, `BackgroundImagePort`, `BranchProvider`. JDK and core domain types only (no
-  IntelliJ/VCS SDK types) — settings ports naturally reference the core models `ProjectSettings` /
-  `ApplicationSettings`.
-* **`adapters/intellij`** — implementations that talk to the IntelliJ SDK (services, configurables, the
-  background-image adapter, the branch providers, the pipeline). This is where all SDK/VCS types live.
+* **`core`** — pure Kotlin: the domain models and the building blocks of the watermark (derivation,
+  placeholder resolution, rendering, `.git/HEAD` parsing, on-disk storage). **No `com.intellij` or `git4idea`
+  imports.**
+* **`ports`** — interfaces for the **boundaries to the outside world**: settings persistence, the IDE
+  background image, and the branch source. Their signatures use only JDK and core types.
+* **`adapters/intellij`** — everything that uses the SDK: persistent services, settings pages, the port
+  implementations, the startup activity, and the refresh pipeline service.
 
-> **Refinement (2026-07-08).** A port must abstract a *boundary to the outside world* (settings persistence,
-> the background image, the branch source). Identifier derivation and image rendering are pure algorithms with
-> no external dependency, so they are plain `core` classes (`IdentifierGenerator`, `ImageRenderer`) constructed
-> directly by the pipeline — not ports, not registered services. They were previously modeled as
-> `IdentifierService` / `ImageService` ports; that indirection abstracted nothing and was removed.
+Rules that follow from this:
 
-Inflow adapters are declared in `plugin.xml` (the post-startup activity, the configurables, and the service
-registrations), which is the configuration entry point that drives the core.
-
-Note the acronym-derivation logic lives in the core (see
-[SPEC-0002](../specs/spec-0002-identifier-derivation.md)), which is exactly the kind of behavior this
-architecture keeps pure and unit-testable.
+* **A port exists only for an outside boundary.** Pure algorithms are plain `core` classes that callers create
+  directly, not ports or registered services. (Derivation and rendering used to sit behind ports; that
+  indirection abstracted nothing and was removed.)
+* **The orchestration lives in an adapter.** The derive → render → store → apply sequence depends on IDE
+  services, threading and project lifecycle, so it is an adapter-side service built from pure core pieces (see
+  [ADR-0006](adr-0006-serialized-refresh-pipeline.md)). The core holds no use-case class of its own.
+* **`plugin.xml` is the composition root.** It binds each port to its implementation, and optional descriptors
+  can swap an implementation (see [ADR-0005](adr-0005-branch-placeholder-implementation.md)).
 
 ## 5. Consequences
 
-* **Positive**: a robust, testable, maintainable codebase; the unstable IDE surface is a handful of adapters;
-  the branch feature could add a whole detection strategy without touching the core (see
-  [ADR-0005](adr-0005-branch-placeholder-implementation.md)).
-* **Negative**: slightly more indirection and boilerplate (ports + adapter wiring). Accepted for the long-term
-  isolation of unstable APIs.
-* **Neutral**: `plugin.xml` acts as the composition root, wiring port interfaces to their implementations.
+* **Positive** — most logic is covered by IDE-free tests, and the unstable surface is a handful of adapters.
+  The branch feature added a whole second detection strategy without touching the core.
+* **Negative** — a few more interfaces and some wiring in `plugin.xml`. Accepted in exchange for isolating
+  unstable APIs.
 
-## 6. Reflected in code
+## 6. Code pointers
 
-- `src/main/kotlin/.../core/**` — pure domain; must contain no `com.intellij` / `git4idea` imports.
-- `src/main/kotlin/.../ports/**` — the four port interfaces (JDK and core domain types only; no IntelliJ/VCS
-  SDK types).
-- `src/main/kotlin/.../adapters/intellij/**` — all SDK-facing implementations.
-- `src/main/resources/META-INF/plugin.xml` — composition root binding interfaces to implementations
-  (`projectService` / `applicationService` `serviceInterface` → `serviceImplementation`); it also registers the
-  standard JetBrains Marketplace error-report submitter (`errorHandler`), so an uncaught plugin exception offers
-  the IDE's "report to JetBrains" dialog rather than being silently lost — separate from the watermark
-  pipeline's own graceful failure handling.
-- Tests: everything under `src/test/kotlin/.../core/**` runs without an IDE;
-  `.../adapters/intellij/ServiceWiringIntegrationTest.kt` checks the wiring.
+* `core/`, `ports/`, `adapters/intellij/` — the three layers.
+* `src/main/resources/META-INF/plugin.xml` — the composition root.
 
-## 7. Related documents
+## 7. Related
 
-- **Serves**: directly [SPEC-0001 — Project watermark](../specs/spec-0001-project-watermark.md) and
-  [SPEC-0002 — Identifier derivation](../specs/spec-0002-identifier-derivation.md); as a cross-cutting
-  architectural foundation it also underpins every other spec.
-- **Related ADRs**: [ADR-0001 — Dynamic image generation](adr-0001-dynamic-image-generation.md) (the primary
-  reason to isolate instability), [ADR-0003](adr-0003-settings-implementation.md),
-  [ADR-0005](adr-0005-branch-placeholder-implementation.md).
+* **Serves**: every spec, as the structural foundation. Most directly
+  [SPEC-0001](../specs/spec-0001-project-watermark.md) and
+  [SPEC-0002](../specs/spec-0002-identifier-derivation.md).
+* **Related ADRs**: [ADR-0001](adr-0001-dynamic-image-generation.md) (the main reason to isolate instability),
+  [ADR-0003](adr-0003-settings-implementation.md), [ADR-0005](adr-0005-branch-placeholder-implementation.md),
+  [ADR-0006](adr-0006-serialized-refresh-pipeline.md).
+
+## Amendments
+
+* **2026-07-08 — Ports only for real boundaries.** The `IdentifierService` / `ImageService` ports were removed
+  in favor of plain core classes (the first rule in §4).

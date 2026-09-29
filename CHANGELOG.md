@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 ### Changed
+- The **Reset** button of the per-project settings page no longer saves right away: it fills the page with the default values, and the settings (including the watermark's opacity, position and fill style) are reset when you click **Apply** or **OK**. **Cancel** now discards a Reset, like on the global settings page.
 - Raised the minimum supported IDE to 2025.2 (since-build 252): the plugin now targets IntelliJ Platform 2025.2.6. Users on older IDEs stay on the previous plugin release.
 - Updated build tooling: IntelliJ Platform Gradle Plugin 2.16.0, Gradle 9.5.0, Kover 0.9.8 (Kotlin stays at 2.2.21).
 

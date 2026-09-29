@@ -1,115 +1,86 @@
 # SPEC-0003: Settings & scopes
 
-> Product/behavioral spec. Describes *what* the user can configure and *where*. The technical realization
-> (configurables, persistent services, storage files) lives in
-> [ADR-0003](../adrs/adr-0003-settings-implementation.md). Keep this in sync with the code
-> (see [`docs/README.md`](../README.md)).
-
 * **Status**: Accepted
-* **Last updated**: 2026-07-10
-* **Owners**: Project maintainers
+* **Last updated**: 2026-09-24
 
 ## 1. Summary
 
-The plugin exposes a small set of settings, organized by **scope**: some apply to a single project, some apply
-globally to every project. They are reached under *File | Settings | Appearance & Behavior*. The plugin
-deliberately configures only the *content* of the watermark image; everything about how the image is
-*displayed* (opacity, position, scaling) is left to the IDE's own Background Image page.
+The plugin has a small set of settings in two **scopes**: per-project settings and global settings that apply
+to every project. Both live under *Settings | Appearance & Behavior | Project Identifier Settings*. The plugin
+configures only the *content* of the watermark. How it is *displayed* (opacity, position, scaling) stays on the
+IDE's own Background Image page.
 
-## 2. Context & motivation
+## 2. Motivation
 
 Two forces shape the settings:
 
-1. **Plugin vs IDE responsibilities.** The IDE already has a rich Background Image UI (opacity, placement,
-   tiling, anchor). Re-exposing those would duplicate and fight the IDE. So the plugin limits itself to what
-   only it can do — decide the image content — and points users at the IDE page for display tweaks.
-2. **Per-project vs global.** Some choices are naturally per-project (this project's override, its font/size/
-   color); others are naturally global (words to ignore when deriving identifiers, configured once).
+1. **Don't duplicate the IDE.** The IDE already has a complete Background Image page (opacity, placement,
+   scaling, anchor). Offering the same controls again would duplicate and conflict with it. The plugin limits
+   itself to what only it can do, the image content, and points users to the IDE page for the rest.
+2. **Per-project vs global.** Some choices naturally belong to one project (its override, font, size, color).
+   Others are set once for everyone (words to ignore when building identifiers).
 
 ## 3. Behavior
 
-Settings live under two nested menu entries in *Appearance & Behavior*:
+The settings are split across two pages:
 
-- **Project Identifier Settings** (parent) → the **global** settings.
-- **Project Identifier Settings | Project Settings** (child) → the **per-project** settings.
+- **Project Identifier Settings** (parent page): the **global** settings.
+- **Project Identifier Settings | Project Settings** (child page): the settings of the **current project**.
 
-Changing any setting re-generates the affected watermark(s) automatically — no restart, no manual refresh.
+Both pages follow the usual IDE rules: **Apply** or **OK** saves, **Cancel** discards what hasn't been applied
+yet. Applying a change regenerates the affected watermark(s) immediately, even while the settings window stays
+open. A global change updates every open project.
 
-### 3.1 Per-project settings (child menu)
+### 3.1 Per-project settings (child page)
 
-Stored with the project, so they travel with it and differ per project:
+These settings are saved per project and **for the current user only**. They are not shared with teammates
+through version control.
 
-| Setting              | What it does                                                                 | Default |
-|----------------------|------------------------------------------------------------------------------|---------|
-| **Identifier override** | Replaces the derived identifier with custom text; supports `${branch}` (see [SPEC-0004](spec-0004-branch-placeholder.md)). A help tooltip documents the placeholder syntax. | unset (derive from name) |
-| **Font family**      | Typeface used to render the text; a curated dropdown of common fonts. Unavailable fonts fall back gracefully. | JetBrains Mono if available, else a sans-serif fallback |
-| **Text size (px)**   | Font size, chosen from a preset list.                                        | 144 px  |
-| **Text color**       | Color of the rendered text.                                                  | White   |
+| Setting                 | What it does                                                                                           | Default |
+|-------------------------|--------------------------------------------------------------------------------------------------------|---------|
+| **Identifier override** | Replaces the automatic acronym with custom text, which may contain `${branch}` (see [SPEC-0002 §3.3](spec-0002-identifier-derivation.md), [SPEC-0004](spec-0004-branch-placeholder.md)). A help tooltip explains the placeholder. | empty (automatic acronym) |
+| **Font family**         | Typeface of the text, picked from a short list of common fonts installed on the machine. A missing font falls back to a generic sans-serif. | JetBrains Mono |
+| **Text size (px)**      | Font size, picked from a list of preset sizes.                                                          | 144 px  |
+| **Text color**          | Color of the text.                                                                                      | White   |
 
-The child page shows a **live preview** of the rendered identifier, beside the controls, that updates
-immediately as you edit the text, font, size or color, so you can compare options without leaving the dialog.
-The preview shows the text *content* (at full opacity, over the current IDE background color); on-screen
-opacity and position stay governed by the IDE Background Image page. The real editor background refreshes
-**immediately when you click Apply** — the settings window stays open — as well as on OK. (Using the preview to
-experiment means nothing is committed until you apply, so Cancel discards it.)
+The page also offers:
 
-The child page also has a **Reset** action that returns these per-project settings to their defaults and
-restores the IDE background display options (opacity/style/anchor) to the plugin's defaults, and a permanent
-**hint** pointing to the IDE Background Image page for opacity/position.
+- **A live preview.** It shows the identifier with the chosen text, font, size and color, updated as you type,
+  so options can be compared before anything is saved. It shows the content at full opacity over the IDE's
+  background color, because the real on-screen opacity and position come from the IDE's Background Image page.
+- **A Reset button.** It fills the page with the defaults above and also marks the watermark's display options
+  (opacity, position, fill style) for reset to the plugin's defaults (see §3.3). Like any other edit, this
+  takes effect on **Apply/OK**, and **Cancel** discards it.
+- **A permanent hint** pointing to the IDE's Background Image page for opacity and position.
 
-### 3.2 Global settings (parent menu)
+### 3.2 Global settings (parent page)
 
-Stored once for the whole IDE installation and applied to all projects:
+These settings are saved once for the whole IDE installation and apply to every project:
 
-| Setting          | What it does                                                                         | Default |
-|------------------|--------------------------------------------------------------------------------------|---------|
-| **Ignored words**| Comma-separated, case-insensitive words removed from a project name before deriving its identifier (see [SPEC-0002 §3.2](spec-0002-identifier-derivation.md)). | empty   |
+| Setting           | What it does                                                                                                          | Default |
+|-------------------|-----------------------------------------------------------------------------------------------------------------------|---------|
+| **Ignored words** | Comma-separated, case-insensitive words removed from project names before the acronym is built (see [SPEC-0002 §3.2](spec-0002-identifier-derivation.md)). A help tooltip gives an example. | empty   |
 
-The **Ignored words** field has a help tooltip with an example, and the parent page provides its own **Reset**
-action.
+The page has its own **Reset** button, which fills the page with the defaults. As on the project page, it takes
+effect on **Apply/OK**.
 
-### 3.3 Where opacity/position/scaling live
+### 3.3 Where opacity, position and scaling live
 
-These are **not** plugin settings. To change how faintly or where the watermark shows, the user goes to
-*Appearance & Behavior | Appearance | Background Image*. The first time the plugin applies an image it seeds a
-low default on-screen opacity, but from then on the IDE page is the source of truth and the plugin preserves
-whatever the user has set there.
+These are **not** plugin settings. To change how faint the watermark is, or where it sits, the user goes to
+*Appearance & Behavior | Appearance | Background Image*. The first time the plugin applies a watermark to a
+project, it uses a low opacity and the bottom-right corner, unscaled. From then on, the IDE page is the source of
+truth: the plugin keeps whatever the user sets there, unless the user applies the per-project **Reset**.
 
-## 4. Non-goals / out of scope
+## 4. Out of scope
 
-- The plugin will not add opacity/placement/tiling/anchor controls; that would duplicate the IDE and is
-  explicitly rejected (see [ADR-0003](../adrs/adr-0003-settings-implementation.md)).
-- Consequence the user should expect: full customization may span **three** places — per-project plugin
-  settings, global plugin settings, and the IDE Background Image page. This is an accepted trade-off in
-  exchange for not fighting the IDE.
+- The plugin will not add opacity, placement, scaling or anchor controls. That would duplicate the IDE (see
+  [ADR-0003](../adrs/adr-0003-settings-implementation.md)).
+- Accepted trade-off: fully customizing the watermark can involve **three** places: the project page, the global
+  page, and the IDE's Background Image page.
+- There is no way to share per-project settings with a team.
 
-## 5. Reflected in code
-
-- `src/main/kotlin/.../core/ProjectSettings.kt` — per-project settings model (override, font, size, color).
-- `src/main/kotlin/.../core/ApplicationSettings.kt` — global settings model (ignored words).
-- `src/main/kotlin/.../adapters/intellij/IntelliJSettingsConfigurable.kt` — per-project settings UI (curated
-  font list, size presets, color picker, reset, hint).
-- `src/main/kotlin/.../adapters/intellij/IntelliJApplicationSettingsConfigurable.kt` — global settings UI.
-- `src/main/kotlin/.../adapters/intellij/IntelliJSettingsService.kt` /
-  `.../IntelliJApplicationSettingsService.kt` — persistence + change notifications.
-- `src/main/resources/messages/MyBundle*.properties` — all user-facing labels, hints and tooltips.
-- `src/main/resources/META-INF/plugin.xml` — nested `applicationConfigurable` + `projectConfigurable` wiring.
-- Tests: `src/test/kotlin/.../adapters/intellij/IntelliJApplicationSettingsServiceTest.kt`,
-  `.../core/ProjectSettingsTest.kt`, `.../core/ApplicationSettingsTest.kt`.
-
-## 6. Related decisions
+## 5. Related
 
 - **Realized by**: [ADR-0003 — Settings implementation](../adrs/adr-0003-settings-implementation.md).
 - **See also**: [SPEC-0001](spec-0001-project-watermark.md), [SPEC-0002](spec-0002-identifier-derivation.md),
   [SPEC-0004](spec-0004-branch-placeholder.md), [SPEC-0005](spec-0005-internationalization.md).
-
-## 7. Change history
-
-- 2026-07-13 — Clicking **Apply** now refreshes the editor/frame background immediately, with the settings
-  window still open (previously it often took effect only after OK/Cancel — an IDE image-cache/modality timing
-  issue; see [ADR-0001](../adrs/adr-0001-dynamic-image-generation.md)).
-- 2026-07-10 — Added a live preview of the rendered identifier to the per-project settings page (updates as you
-  edit text/font/size/color; content only, opacity/position remain IDE-controlled).
-- 2025-10-08 — Settings reorganized into a nested parent (global) / child (per-project) structure; global
-  ignored-words setting added.
-- 2025-10-01 — Initial per-project settings under *Appearance & Behavior | Appearance*.

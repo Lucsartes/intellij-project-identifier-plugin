@@ -59,8 +59,12 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
     private var cachedBranch: String? = null
     private var branchResolved = false
 
-    // Guards the preview from re-rendering repeatedly while reset() bulk-updates the controls.
+    // Guards the preview from re-rendering repeatedly while showInControls() bulk-updates the controls.
     private var suppressPreview = false
+
+    // Set by the Reset button: the IDE background display options are restored on the next apply(), not immediately,
+    // so Cancel discards a Reset like any other edit.
+    private var pendingDisplayReset = false
 
     // Cached defaults used for rendering labels like "(Default)"
     private var defaultFontFamily: String? = null
@@ -202,18 +206,10 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
                 val resetButton = JButton(MyBundle.message("settings.reset.button"))
                 // Keep the button compact; don't stretch it to full width
                 resetButton.addActionListener {
-                    runCatching {
-                        // Reset IDE background menu settings to defaults first
-                        val bg = project.getService(BackgroundImagePort::class.java)
-                        bg.resetBackgroundSettingsToDefaults()
-                    }.onFailure { t ->
-                        log.warn("Failed to reset background settings to defaults", t)
-                    }
-                    // Reset plugin settings to defaults and refresh UI
-                    val defaults = ProjectSettings()
-                    log.info("Resetting plugin settings to defaults via UI action: override=${defaults.identifierOverride}, fontFamily=${defaults.fontFamily}, fontSizePx=${defaults.fontSizePx}, textColorArgb=${defaults.textColorArgb}")
-                    service.save(defaults)
-                    reset()
+                    // Only fill the form with defaults; nothing is saved until Apply/OK (see apply()).
+                    log.info("Filling settings UI with defaults via Reset button; applied on Apply/OK")
+                    pendingDisplayReset = true
+                    showInControls(ProjectSettings())
                 }
                 // Temporarily adjust GridBag constraints to prevent stretching this button
                 val oldFill = gbc.fill
@@ -326,11 +322,12 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
         val uiSizePx = selectedSize?.let { if (it == defaultFontSizePx) null else it }
         val uiColorArgbRaw = if (this::colorPanel.isInitialized) colorPanel.selectedColor?.rgb else null
         val uiColorArgb = uiColorArgbRaw?.let { if (it == Color.WHITE.rgb) null else it }
-        val modified = (uiIdentifier != s.identifierOverride) ||
+        val modified = pendingDisplayReset ||
+                (uiIdentifier != s.identifierOverride) ||
                 (uiFont != s.fontFamily) ||
                 (uiSizePx != s.fontSizePx) ||
                 (uiColorArgb != s.textColorArgb)
-        log.info("Settings UI isModified: $modified (uiIdentifier=$uiIdentifier, uiFont=$uiFont, uiSizePx=$uiSizePx, uiColorArgb=$uiColorArgb) vs (identifier=${s.identifierOverride}, fontFamily=${s.fontFamily}, fontSizePx=${s.fontSizePx}, textColorArgb=${s.textColorArgb})")
+        log.info("Settings UI isModified: $modified (pendingDisplayReset=$pendingDisplayReset, uiIdentifier=$uiIdentifier, uiFont=$uiFont, uiSizePx=$uiSizePx, uiColorArgb=$uiColorArgb) vs (identifier=${s.identifierOverride}, fontFamily=${s.fontFamily}, fontSizePx=${s.fontSizePx}, textColorArgb=${s.textColorArgb})")
         return modified
     }
 
@@ -347,6 +344,15 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
             fontSizePx = uiSizePx,
             textColorArgb = uiColorArgb
         )
+        // Restore the IDE display options BEFORE saving: save() triggers the refresh, which must read the restored values.
+        if (pendingDisplayReset) {
+            runCatching {
+                project.getService(BackgroundImagePort::class.java).resetBackgroundSettingsToDefaults()
+            }.onFailure { t ->
+                log.warn("Failed to reset background settings to defaults", t)
+            }
+            pendingDisplayReset = false
+        }
         log.info("Applying settings from UI: override=${settings.identifierOverride}, fontFamily=${settings.fontFamily}, fontSizePx=${settings.fontSizePx}, textColorArgb=${settings.textColorArgb}")
         service.save(settings)
     }
@@ -354,6 +360,20 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
     override fun reset() {
         val s = service.load()
         log.info("Resetting settings UI from service: identifier=${s.identifierOverride}, fontFamily=${s.fontFamily}, fontSizePx=${s.fontSizePx}, textColorArgb=${s.textColorArgb}")
+        pendingDisplayReset = false
+        showInControls(s)
+    }
+
+    override fun disposeUIResources() {
+        log.info("Disposing settings UI resources")
+        panel = null
+        pendingDisplayReset = false
+        branchResolved = false
+        cachedBranch = null
+    }
+
+    /** Shows [s] in the UI controls without saving anything, then refreshes the preview once. */
+    private fun showInControls(s: ProjectSettings) {
         suppressPreview = true
         identifierField.text = s.identifierOverride ?: ""
         colorPanel.selectedColor = (s.textColorArgb?.let { Color(it, true) } ?: Color.WHITE)
@@ -416,13 +436,6 @@ class IntelliJSettingsConfigurable(private val project: Project) : SearchableCon
         }
         suppressPreview = false
         updatePreview()
-    }
-
-    override fun disposeUIResources() {
-        log.info("Disposing settings UI resources")
-        panel = null
-        branchResolved = false
-        cachedBranch = null
     }
 
     private fun wirePreviewListeners() {

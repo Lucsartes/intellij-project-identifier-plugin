@@ -1,67 +1,58 @@
-# ADR-NNNN: [Short technical title]
+# ADR-NNNN: <Short technical title, ideally naming the decision>
 
-> **What is an ADR?** An Architecture Decision Record captures a **technical decision** — *how* the plugin is
-> built and *why that approach*. ADRs cover architecture, libraries, IDE APIs, storage formats, algorithms,
-> concurrency, and trade-offs. The *product* behavior an ADR serves is described in a spec under
-> [`../specs/`](../specs/); keep the user-facing "what/why" there and the "how" here.
->
-> **Living document.** This ADR must reflect the code **as it stands today**, not just the decision as first
-> made. When you change the technical approach in code, update the ADR in the same change; when you change an
-> ADR, change the code to match. For a small evolution, amend the ADR with a dated note; for a reversal, write a
-> new ADR that supersedes this one. See [`.claude/CLAUDE.md`](../../.claude/CLAUDE.md).
+* **Status**: Proposed | Accepted | Superseded by [ADR-NNNN](adr-NNNN-short-title.md)
+* **Decided**: YYYY-MM-DD
+* **Last updated**: YYYY-MM-DD
 
-* **Status**: [Proposed | Accepted | Superseded by [ADR-NNNN](adr-NNNN-...md)]
-* **Last updated**: [YYYY-MM-DD]
-* **Authors**: [name(s)]
+<!--
+How to write an ADR (delete this comment when you use the template):
+
+An ADR records ONE technical decision worth explaining: the problem, the options that were weighed, the
+choice, and what it costs. It is written for a future maintainer who asks "why is it built this way?".
+
+- Explain the decision, not the code. No class-by-class walkthrough, no line-level detail, no values that
+  are tuned in code (timeouts, sizes, defaults): the code is the source of truth for those.
+- Name a class or API only when the decision is about it, e.g. "only X may touch the internal API".
+- It should change only when the decision changes:
+  * a small evolution: add a dated entry under "Amendments";
+  * a reversal: write a new ADR, set this one to "Superseded by", and link both ways.
+- The user-visible behavior it serves is described in a spec (../specs/); link it rather than repeating it.
+-->
 
 ## 1. Context
 
-[The technical dilemma or problem. What is the driver for this decision? What is the current state and what
-forces are at play? Frame it neutrally.]
+<The technical problem and the forces at play, stated neutrally. Link the spec that needs it.>
 
 ## 2. Decision drivers
 
-[The key technical factors and constraints, e.g.:
-* **Maintainability** — …
-* **Testability** — …
-* **API stability / dependency footprint** — …
-* **Performance** — …]
+* **<Driver>** — <why it matters here>.
 
 ## 3. Considered options
 
-[Each option with a brief description and an honest pros/cons against the drivers.
-* **Option A** — description. Pros: … Cons: …
-* **Option B** — …
-* **Option C** — …]
+* **A — <name>.** <One or two sentences.> Pros: … Cons: …
+* **B — <name>.** …
 
 ## 4. Decision
 
-[State the chosen option explicitly and justify it against the drivers.]
+<The chosen option and why it wins against the drivers. Include the rules that follow from it, such as
+boundaries that must not be crossed or invariants the code must keep.>
 
 ## 5. Consequences
 
-[* **Positive** — …
-* **Negative** — …
-* **Neutral** — changes that simply need to be done.]
+* **Positive** — …
+* **Negative** — … (and how it is mitigated)
 
-## 6. Reflected in code
+## 6. Code pointers
 
-[The living-doc anchor. Link the source files (and tests) that implement this decision, so the ADR stays tied
-to reality. Update these links when code moves.
-- `src/main/kotlin/.../Something.kt` — what it implements.
-- Tests: `src/test/kotlin/.../SomethingTest.kt`.]
+<One to three places to start reading: packages or the classes the decision is about. They are signposts, not
+an inventory, so don't list every file and don't describe what each one does.>
 
-## 7. Related documents
+## 7. Related
 
-[- **Serves**: [SPEC-NNNN — ...](../specs/spec-NNNN-...md)
-- **Related ADRs**: [ADR-NNNN — ...](adr-NNNN-...md)
-- External references, if any.]
+* **Serves**: [SPEC-NNNN — …](../specs/spec-NNNN-short-title.md)
+* **Related ADRs**: [ADR-NNNN — …](adr-NNNN-short-title.md)
 
----
+## Amendments
 
-### File naming
-
-`adr-NNNN-short-title-in-kebab-case.md`
-
-* **`NNNN`**: zero-padded sequential number (`0001`, `0002`, …), so ADRs sort and reference cleanly.
-* **`short-title-in-kebab-case`**: a brief, lowercase, hyphen-separated version of the title.
+<Optional. Dated notes for evolutions that refine the decision without reversing it, oldest first.
+Example: "**YYYY-MM-DD** — …".>

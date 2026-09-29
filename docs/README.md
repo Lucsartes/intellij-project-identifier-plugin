@@ -1,46 +1,59 @@
 # Project documentation
 
-This folder holds the plugin's **living documentation**. It is split into two kinds of document:
+This folder holds the plugin's design documentation, split into two kinds of document:
 
-| Folder        | Captures                          | Answers                              | Audience frame           |
-|---------------|-----------------------------------|--------------------------------------|--------------------------|
-| [`specs/`](specs/)   | **Product / behavioral** decisions | *What* does the plugin do, and *why*? | The user's point of view |
-| [`adrs/`](adrs/)     | **Technical** decisions            | *How* is it built, and *why that way*? | The maintainer's point of view |
+| Folder              | Captures                        | Answers                                  | Written for       |
+|---------------------|---------------------------------|------------------------------------------|-------------------|
+| [`specs/`](specs/)  | **Product / behavioral** rules  | *What* does the plugin do, and *why*?    | A user            |
+| [`adrs/`](adrs/)    | **Technical** decisions         | *How* is it built, and *why that way*?   | A maintainer      |
 
-A **spec** describes observable behavior: features, user-facing rules, settings semantics, supported
-languages, edge cases. Nothing in a spec should require reading source code to understand.
+A **spec** describes behavior a user can observe: features, rules, defaults, settings, edge cases. You never
+need the source code to understand it, and it names no classes, libraries or IDE APIs.
 
-An **ADR** (Architecture Decision Record) describes a technical choice: architecture, libraries, IDE APIs,
-storage formats, algorithms, concurrency, trade-offs. One spec is typically **realized by** one or more ADRs;
-one ADR **serves** one or more specs. They cross-link each other.
+An **ADR** (Architecture Decision Record) records one technical decision that is worth explaining:
+architecture, IDE APIs, dependencies, concurrency, trade-offs. It explains the choice, not the code.
 
-## Living-document rule
+A spec is **realized by** one or more ADRs, and an ADR **serves** one or more specs. They link to each other.
 
-Both specs and ADRs must always reflect the plugin **as it is today** — not just as it was first designed.
+## Keeping docs and code aligned
 
-> **Docs and code move together.** When you change code, update the affected spec/ADR in the *same* change.
-> When you change a spec/ADR, change the code so it still matches. A doc that disagrees with the code is a bug.
+Both kinds of document are **high level on purpose**, so that most code changes don't touch them. The rule:
 
-Each document has a **Reflected in code** section linking to the source files and tests that implement it, so
-you can jump from doc to code and back, and notice quickly when they drift apart. This rule is also recorded
-in [`.claude/CLAUDE.md`](../.claude/CLAUDE.md) so automated assistants follow it.
+> **A doc must never contradict the code.** When they disagree, fix whichever one is wrong in the same change.
+
+In practice:
+
+* **User-visible behavior changes** (new feature, changed rule or default): update the spec, and add a
+  `CHANGELOG.md` entry.
+* **A technical decision changes**: amend the ADR with a dated entry, or write a new ADR that supersedes it
+  when the decision is reversed.
+* **Refactors, renames, and bug fixes that restore documented behavior** need no doc change.
+* **When you work in an area an ADR covers**, re-read that ADR (its *Code pointers* section helps you find
+  it) and check it still holds.
+
+Specs keep no change history: `CHANGELOG.md` and git record what changed and when. This rule is repeated in
+[`.claude/CLAUDE.md`](../.claude/CLAUDE.md) so automated assistants follow it.
 
 ## Index
 
 ### Specs
 - [SPEC-0001 — Project watermark](specs/spec-0001-project-watermark.md) — the core feature: a per-project background watermark.
-- [SPEC-0002 — Identifier derivation](specs/spec-0002-identifier-derivation.md) — how watermark text is derived from the project name.
+- [SPEC-0002 — Identifier derivation](specs/spec-0002-identifier-derivation.md) — which text the watermark shows.
 - [SPEC-0003 — Settings & scopes](specs/spec-0003-settings-and-scopes.md) — what users can configure, and where.
 - [SPEC-0004 — Branch placeholder](specs/spec-0004-branch-placeholder.md) — the `${branch}` dynamic placeholder.
-- [SPEC-0005 — Internationalization](specs/spec-0005-internationalization.md) — multi-language user interface.
+- [SPEC-0005 — Internationalization](specs/spec-0005-internationalization.md) — the user interface language.
 
 ### ADRs
-- [ADR-0001 — Dynamic image generation](adrs/adr-0001-dynamic-image-generation.md) — render a PNG and set it as the editor background.
+- [ADR-0001 — Dynamic image generation](adrs/adr-0001-dynamic-image-generation.md) — render a PNG and set it as the IDE background image.
 - [ADR-0002 — Hexagonal architecture](adrs/adr-0002-hexagonal-architecture.md) — core / ports / adapters separation.
-- [ADR-0003 — Settings implementation](adrs/adr-0003-settings-implementation.md) — configurables, persistent services, storage.
-- [ADR-0004 — Internationalization implementation](adrs/adr-0004-internationalization-implementation.md) — `DynamicBundle` + resource bundles.
-- [ADR-0005 — Branch placeholder implementation](adrs/adr-0005-branch-placeholder-implementation.md) — hybrid branch detection + serialized pipeline.
+- [ADR-0003 — Settings implementation](adrs/adr-0003-settings-implementation.md) — plugin/IDE boundary, scopes, persistence, refresh.
+- [ADR-0004 — Internationalization implementation](adrs/adr-0004-internationalization-implementation.md) — IntelliJ resource bundles.
+- [ADR-0005 — Branch placeholder implementation](adrs/adr-0005-branch-placeholder-implementation.md) — `${name}` templates + hybrid branch detection.
+- [ADR-0006 — Serialized refresh pipeline](adrs/adr-0006-serialized-refresh-pipeline.md) — one thread, latest run wins.
 
-### Templates
-- [Spec template](specs/spec-template.md)
-- [ADR template](adrs/adr-template.md)
+### Writing a new document
+- Start from the [spec template](specs/spec-template.md) or the [ADR template](adrs/adr-template.md).
+  Their comments explain what belongs in each section.
+- Name files `spec-NNNN-short-title.md` / `adr-NNNN-short-title.md`: `NNNN` is the next zero-padded number
+  in that folder, and the title is lowercase kebab-case. Spec and ADR numbers are independent of each other.
+- Add the document to the index above.

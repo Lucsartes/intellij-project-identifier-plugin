@@ -1,110 +1,82 @@
-# ADR-0001: Dynamic image generation for the watermark
-
-> Technical decision. The product behavior it serves is [SPEC-0001 — Project watermark](../specs/spec-0001-project-watermark.md).
-> Living document — keep in sync with the code (see [`docs/README.md`](../README.md)).
+# ADR-0001: Render the watermark as an image and set it as the IDE background
 
 * **Status**: Accepted
-* **Last updated**: 2026-07-08 (originally decided 2025-08-21)
-* **Authors**: Project maintainers
+* **Decided**: 2025-08-21
+* **Last updated**: 2026-09-24
 
 ## 1. Context
 
-The plugin must place a low-opacity text marker behind the editor and empty frame, per project, visible during
-task switching (see [SPEC-0001](../specs/spec-0001-project-watermark.md)). The technical question is *how* to
-get such a marker onto the IDE's UI without being intrusive and without a large maintenance burden.
+[SPEC-0001](../specs/spec-0001-project-watermark.md) asks for a faint text marker behind the editor and the
+empty window area, per project, that stays visible in a task switcher. The question is how to put such a marker
+into the IDE's UI without getting in the way of coding and without a heavy maintenance burden.
 
 ## 2. Decision drivers
 
-* **Fidelity to the desired UX** — the marker must be a true, behind-the-code background element, not an
-  overlay that competes with editor content.
-* **Feasibility** — achievable with the public or reasonably accessible parts of the IntelliJ Platform SDK.
-* **Performance** — no noticeable lag or resource drain.
-* **Per-project scope** — the marker must be settable per project.
-* **API-stability risk** — internal/undocumented APIs may break across IDE versions; minimize and isolate the
-  exposure.
+* **True background** — the marker must sit behind the code, not compete with it as an overlay.
+* **Feasibility** — reachable with public, or at least accessible, parts of the IntelliJ Platform SDK.
+* **Per-project scope** — each project gets its own marker.
+* **API-stability risk** — internal or undocumented IDE APIs can break between releases. Keep their use small
+  and isolated.
+* **Performance** — no noticeable lag.
 
 ## 3. Considered options
 
-* **Strategy 1 — Dynamic image generation.** Programmatically render a transparent PNG with the identifier
-  text, store it, and set it as the editor/frame background via the IDE background-image mechanism.
-  * Pros: integrates with the IDE's built-in background feature, giving a genuine background watermark that is
-    visible during task switching; the whole flow is something a user can do by hand today, confirming the end
-    state is valid — the plugin just automates the tedious steps.
-  * Cons: relies on internal IDE background-image properties (applied via `IdeBackgroundUtil.EDITOR_PROP` /
-    `FRAME_PROP`), which may change across IDE releases; requires file I/O and cleanup.
-* **Strategy 2 — Direct rendering** onto the editor canvas via a custom renderer.
-  * Pros: no file I/O; uses public painting APIs.
-  * Cons: high complexity (deep knowledge of custom painting); risks drawing over code and interfering with the
-    coding experience.
-* **Strategy 3 — Alternative UI component** (status bar / tool window).
-  * Pros: simple, stable, public APIs.
-  * Cons: fails the core UX — not a background watermark, and not visible in a task switcher.
+* **A — Generate an image and set it as the IDE background image.** Render a transparent PNG with the text and
+  hand it to the IDE's built-in background-image feature. Pros: a genuine background, per project, and it
+  automates something users already do by hand, which proves the end state is supported. Cons: the IDE setting
+  it writes is internal and may change between releases; image files must be written and cleaned up.
+* **B — Paint directly on the editor canvas** with a custom painter. Pros: no files. Cons: complex custom
+  painting, with the risk of drawing over code.
+* **C — A separate UI element** (status bar widget, tool window). Pros: simple, stable public APIs. Cons: not a
+  background, and not visible in a task switcher. It fails the core need.
 
 ## 4. Decision
 
-Adopt **Strategy 1 (dynamic image generation)**. It is the only option that delivers the exact UX in
-[SPEC-0001](../specs/spec-0001-project-watermark.md): a real background watermark visible during task
-switching. The reliance on an internal property is accepted and **isolated behind a port + adapter** (see
-[ADR-0002](adr-0002-hexagonal-architecture.md)): only `IntelliJBackgroundImageAdapter` touches the unstable
-API, and it fails gracefully so a broken property can never crash the IDE.
+Adopt **option A**.
 
-The image itself is rendered with pure JDK AWT (`java.awt` + `ImageIO`), which works headless and keeps
-rendering logic in the IDE-independent core. Text is drawn fully opaque; on-screen faintness is delegated to
-the IDE's background-image opacity (see [ADR-0003](adr-0003-settings-implementation.md) and
-[SPEC-0003](../specs/spec-0003-settings-and-scopes.md)).
+* **Rendering stays pure.** The image is drawn with plain JDK AWT, which also works headless. Rendering
+  therefore lives in the IDE-independent core and is unit-tested (see
+  [ADR-0002](adr-0002-hexagonal-architecture.md)). The text is drawn fully opaque, and on-screen faintness is
+  left to the IDE's background opacity.
+* **The internal API is isolated.** Only the background-image adapter (behind `BackgroundImagePort`) touches
+  the internal background properties. It catches every failure, so a broken property on some IDE build can
+  never crash the IDE: the watermark just doesn't update.
+* **The user's display choices win.** When the plugin applies an image, it keeps the opacity, fill style and
+  anchor already configured and uses its own defaults only for values that aren't set yet. Display remains the
+  IDE's job (see [ADR-0003](adr-0003-settings-implementation.md)).
+* **Every render gets a new file name.** The IDE caches background images by path, so rewriting the same file
+  would keep showing the stale image. Each render writes a uniquely named file in a per-project folder under the
+  IDE's system directory and deletes that project's previous files. The per-project folder means one project's
+  cleanup can never remove another project's image.
 
 ## 5. Consequences
 
-* **Positive**:
-  * Delivers the intended UX precisely; straightforward to implement and evolve.
-  * Rendering is pure and unit-testable; the unstable IDE surface is a single small adapter.
-* **Negative**:
-  * The background-image property is internal, so the apply step may need maintenance on major IDE upgrades.
-    Mitigation: it lives only in `IntelliJBackgroundImageAdapter`, which catches and logs failures.
-  * Requires on-disk image management (write + cleanup); handled by `WatermarkStore` with per-project isolation.
+* **Positive** — delivers exactly the intended experience. Rendering is pure and tested, and the unstable IDE
+  surface is confined to one small adapter.
+* **Negative** — the internal property can change on a major IDE upgrade, so the apply step may need
+  maintenance. It is contained in one adapter and fails soft. On-disk image management (write + cleanup) is
+  also needed.
 
-> **Amendment 2026-07-07 (see [ADR-0005](adr-0005-branch-placeholder-implementation.md)).** The `${branch}`
-> feature adds an *optional* dependency on the bundled Git plugin (Git4Idea). This stays within the
-> "reasonably accessible parts of the SDK" driver: the dependency is declared `optional`, so when Git is absent
-> the plugin still loads and falls back to reading `.git/HEAD`. The plugin's only *hard* dependency remains
-> `com.intellij.modules.platform`.
+## 6. Code pointers
 
-> **Amendment 2026-07-13 — applying live under the modal Settings dialog.** Setting the background property to a
-> *new* image path repaints the editor only *after* the modal Settings dialog closes: the platform loads the new
-> file on a pooled thread and swaps it via a non-modal `invokeLater`, which is held back while the dialog is open
-> (confirmed by decompiling the platform's `PainterHelper$MyImagePainter` — the relevant internals are identical
-> on IC 2024.3.6 and 2025.2.6). So clicking **Apply** (dialog stays open) would only refresh the watermark when a
-> cache race happened to fall the right way. To make Apply
-> deterministic, the adapter reflectively pre-populates the platform's internal painter image cache
-> (`PainterHelper$MyImagePainter.ourImageCache`) with the freshly rendered image *before* writing the property, so
-> the painter's next paint takes its **synchronous** cache-hit branch and applies the watermark immediately. This
-> deepens the internal-API exposure, so — consistent with this ADR — it stays strictly inside the adapter and is
-> entirely best-effort: `WallpaperCacheReflection.prime` returns `false` (never throws) and the code falls back to
-> the plain property write (still applied on OK/Cancel) if the internals differ on some IDE build. A guard test
-> (`WallpaperCacheReflectionTest`) fails loudly if the reflected class/field/record shape changes on an upgrade.
+* `core/ImageRenderer.kt` — the pure renderer.
+* `adapters/intellij/IntelliJBackgroundImageAdapter.kt` — the only code that writes the IDE background
+  properties.
 
-## 6. Reflected in code
+## 7. Related
 
-- `src/main/kotlin/.../core/ImageRenderer.kt` — AWT rendering of the transparent PNG (opaque text, antialiased,
-  size adapts to the text).
-- `src/main/kotlin/.../core/FontSupport.kt` — pure font-resolution policy (preferred default, `SansSerif`
-  fallback) shared by the renderer, pipeline and settings UI.
-- `src/main/kotlin/.../core/CoreDefaults.kt` — rendering defaults (default size 144 px, margins).
-- `src/main/kotlin/.../ports/BackgroundImagePort.kt` — the port isolating the background-image concern.
-- `src/main/kotlin/.../adapters/intellij/IntelliJBackgroundImageAdapter.kt` — the only code touching the
-  internal `ide.background.*` properties (`IdeBackgroundUtil.EDITOR_PROP` / `FRAME_PROP`); fails gracefully.
-- `src/main/kotlin/.../adapters/intellij/WallpaperCacheReflection.kt` — best-effort reflective priming of the
-  IDE's internal painter image cache so **Apply** refreshes the watermark live under the modal Settings dialog;
-  returns `false` and never throws on unknown internals. Guarded by
-  `src/test/kotlin/.../adapters/intellij/WallpaperCacheReflectionTest.kt`.
-- `src/main/kotlin/.../adapters/intellij/BackgroundPropertiesConstants.kt` — the property keys and display
-  defaults (opacity 15, style `plain`, anchor `bottom_right`).
-- `src/main/kotlin/.../core/WatermarkStore.kt` — on-disk write + cleanup.
-- Tests: `src/test/kotlin/.../core/ImageRendererTest.kt`, `.../core/ImageRendererEdgeCasesTest.kt`.
+* **Serves**: [SPEC-0001 — Project watermark](../specs/spec-0001-project-watermark.md).
+* **Related ADRs**: [ADR-0002](adr-0002-hexagonal-architecture.md) (isolation of the unstable API),
+  [ADR-0003](adr-0003-settings-implementation.md) (content vs display boundary),
+  [ADR-0006](adr-0006-serialized-refresh-pipeline.md) (how renders are sequenced).
 
-## 7. Related documents
+## Amendments
 
-- **Serves**: [SPEC-0001 — Project watermark](../specs/spec-0001-project-watermark.md).
-- **Related ADRs**: [ADR-0002 — Hexagonal architecture](adr-0002-hexagonal-architecture.md),
-  [ADR-0003 — Settings implementation](adr-0003-settings-implementation.md),
-  [ADR-0005 — Branch placeholder implementation](adr-0005-branch-placeholder-implementation.md).
+* **2026-07-13 — Live refresh under the modal Settings dialog.** When the background property points at a new
+  file, the IDE loads it in the background and swaps it in only once the modal Settings dialog closes. As a
+  result, **Apply** (which keeps the dialog open) didn't reliably refresh the watermark. The adapter now puts
+  the freshly rendered image into the IDE's internal background-image cache, by reflection, *before* it writes
+  the property, so the next repaint shows it right away. This goes deeper into internals, so it follows the
+  rules above: it lives only in the adapter, is best-effort (on any mismatch it silently falls back to the
+  plain property write, which still applies when the dialog closes), and a guard test (`WallpaperCacheReflectionTest`)
+  fails loudly if the internal shape changes on an IDE upgrade.

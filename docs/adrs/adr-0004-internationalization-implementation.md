@@ -1,79 +1,61 @@
-# ADR-0004: Internationalization implementation
-
-> Technical decision. Serves [SPEC-0005 — Internationalization](../specs/spec-0005-internationalization.md).
-> Living document — keep in sync with the code (see [`docs/README.md`](../README.md)).
+# ADR-0004: Internationalization with IntelliJ resource bundles
 
 * **Status**: Accepted
-* **Last updated**: 2026-07-08 (originally decided 2025-10-07)
-* **Authors**: Project maintainers
+* **Decided**: 2025-10-07
+* **Last updated**: 2026-09-24
 
 ## 1. Context
 
-[SPEC-0005](../specs/spec-0005-internationalization.md) requires the plugin UI to appear in the user's IDE
-language with an English fallback, and new languages to be addable without code changes. The technical question
-is which localization mechanism to use.
+[SPEC-0005](../specs/spec-0005-internationalization.md) requires the plugin's UI to follow the IDE language,
+fall back to English, and let a new language be added without code changes. The question is which localization
+mechanism to use.
 
 ## 2. Decision drivers
 
-* **Maintainability** — adding/updating a translation must not touch business or UI logic.
-* **Extensibility** — a new language should be a drop-in file.
-* **Platform consistency** — follow IntelliJ Platform i18n conventions (locale detection, fallback).
-* **Testability** — translation completeness/correctness must be verifiable.
+* **Platform consistency** — follow IntelliJ's own i18n conventions (locale detection, fallback).
+* **Extensibility** — a new language should be a new file, not a code change.
+* **Maintainability** — changing a translation must not touch UI logic.
+* **Testability** — missing translations must be caught automatically.
 
 ## 3. Considered options
 
-* **A — Hardcoded English strings.** Simplest, but excludes non-English users and forces code changes for every
-  translation. Rejected.
-* **B — Resource bundles via IntelliJ `DynamicBundle`.** Standard JVM/IntelliJ i18n: keys in code,
-  translations in per-locale `.properties` files, automatic locale detection and English fallback. A new
-  language is a new `.properties` file. Testable.
-* **C — External translation service/database.** Enables remote updates but adds network dependency, latency,
-  and offline fragility — massive overkill for a single plugin. Rejected.
+* **A — Hard-coded English.** Simplest, but excludes non-English users, and every translation becomes a code
+  change.
+* **B — IntelliJ `DynamicBundle` resource bundles.** Keys in code, one `.properties` file per language,
+  automatic locale detection and English fallback, all handled by the platform.
+* **C — An external translation service.** Remote updates, but adds a network dependency and offline fragility
+  for no real gain in a small plugin.
 
 ## 4. Decision
 
-Adopt **Option B**: IntelliJ's `DynamicBundle`.
+Adopt **option B**.
 
-* `MyBundle` extends `DynamicBundle("messages.MyBundle")` and exposes
-  `message(key, vararg params)`, with `@PropertyKey(resourceBundle = "messages.MyBundle")` so the IDE validates
-  keys at author time.
-* Strings live in `src/main/resources/messages/`: `MyBundle.properties` (English, the base/fallback) and
-  `MyBundle_fr.properties` (French). The plugin manifest declares `<resource-bundle>messages.MyBundle</resource-bundle>`,
-  and configurables reference bundle keys for their titles.
-* Keys use a hierarchical dot-notation (`settings.identifier.override.label`,
-  `settings.identifier.override.tooltip.description`, …). Parameterized values use `{0}`-style placeholders
-  (e.g. `default.annotated.value`).
-* Adding a language = copy `MyBundle.properties` to `MyBundle_<lang>.properties`, translate the values, extend
-  the i18n tests. No code change.
+* A single bundle, `messages.MyBundle`, holds every UI string: `MyBundle.properties` is English (the base and
+  fallback), and `MyBundle_<lang>.properties` holds a translation. Keys are checked at author time through
+  the IDE's `@PropertyKey` support.
+* UI code never contains user-facing literals. It always reads the bundle, and the settings page titles are
+  declared in `plugin.xml` as bundle keys.
+* Adding a language means copying the base file, translating the values, and extending the i18n tests. No code
+  changes.
+* **Not localized:** the plugin name, and the Marketplace / Plugins-list description, which the build takes
+  from `README.md` (English). Localizing the description would mean keeping a second long text in sync in every
+  language, while the Marketplace listing itself is English anyway.
 
 ## 5. Consequences
 
-* **Positive**: accessible to non-English users; new languages are drop-in; clean separation of text from
-  logic; automatic locale detection and fallback; testable completeness.
-* **Negative**: keys must be kept in sync across locale files; `.properties` are less type-safe than code
-  (mitigated by `@PropertyKey` and tests); discipline needed to externalize every user-facing string.
-* **Neutral**: translation upkeep is ongoing as the UI evolves; bundle loading is at runtime (negligible cost).
+* **Positive** — standard platform behavior (locale detection, fallback), drop-in languages, and a clean split
+  between text and logic.
+* **Negative** — every locale file must keep the same keys, and `.properties` files are less type-safe than
+  code. Both are mitigated by `@PropertyKey` and by a unit test that fails when a translation is missing a key.
 
-## 6. Reflected in code
+## 6. Code pointers
 
-- `src/main/kotlin/.../MyBundle.kt` — `DynamicBundle` accessor with `@PropertyKey` validation.
-- `src/main/resources/messages/MyBundle.properties` — English (base) strings.
-- `src/main/resources/messages/MyBundle_fr.properties` — French strings.
-- `src/main/resources/META-INF/plugin.xml` — `<resource-bundle>` declaration; configurables pass bundle keys.
-- Consumers: `IntelliJSettingsConfigurable` / `IntelliJApplicationSettingsConfigurable` call
-  `MyBundle.message(...)` for every label, hint and tooltip.
-- Tests: `src/test/kotlin/.../i18n/I18nResourceBundleTest.kt` (all locales load; key sets stay in sync),
-  `.../i18n/PluginXmlI18nTest.kt` (manifest-referenced strings are localized).
+* `src/main/resources/messages/` — the bundle files.
+* `src/test/kotlin/.../i18n/` — the key-parity and manifest tests.
 
-## 7. Related documents
+## 7. Related
 
-- **Serves**: [SPEC-0005 — Internationalization](../specs/spec-0005-internationalization.md).
-- **Related ADRs**: [ADR-0002](adr-0002-hexagonal-architecture.md) (core stays locale-agnostic; text lives in
-  adapters/resources), [ADR-0003](adr-0003-settings-implementation.md) (the settings UI consumes these
-  strings), [ADR-0005](adr-0005-branch-placeholder-implementation.md) (added the override tooltip keys).
-
-## 8. Future evolution
-
-Likely additions: more languages (community-contributed), CI checks for key-set parity and placeholder-count
-consistency, and locale-aware formatting via `MessageFormat` if richer messages appear. Any change must
-preserve the code/translation separation and backward compatibility with existing language files.
+* **Serves**: [SPEC-0005 — Internationalization](../specs/spec-0005-internationalization.md).
+* **Related ADRs**: [ADR-0002](adr-0002-hexagonal-architecture.md) (the core stays locale-agnostic; text
+  lives in adapters and resources), [ADR-0003](adr-0003-settings-implementation.md) (the settings UI that uses
+  these strings).
